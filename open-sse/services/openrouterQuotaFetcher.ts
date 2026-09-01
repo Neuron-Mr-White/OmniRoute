@@ -17,8 +17,13 @@
  *     -> { data: { total_credits, total_usage } }
  *     Account-level totals; upstream caches this endpoint for ~60s already.
  *
- * We fetch both (credits is a cheap second call, same auth) and merge into one
- * QuotaInfo. Graceful "unknown" on any fetch failure — quota tracking must
+ * We fetch both and merge into one QuotaInfo. OpenRouter is credit-based, not
+ * subscription-based: the /credits balance (`total_credits - total_usage`, the
+ * documented "get remaining credits" signal) is authoritative and stands on
+ * its own — a /key failure (rate limit, transient error, unexpected shape)
+ * degrades to a credits-only quota instead of discarding the balance.
+ * Only a double auth-rejection (401/403 on both) means the token is invalid.
+ * Graceful "unknown" on any fetch failure — quota tracking must
  * never block routing (mirrors deepseekQuotaFetcher.ts / bailianQuotaFetcher.ts).
  *
  * Cache: in-memory TTL (45s, inside the 30-60s window OpenRouter's own docs
@@ -204,6 +209,38 @@ function buildQuotaFromParts(
   };
 }
 
+/**
+ * Credits-only quota — built when `/key` is unavailable but `/credits`
+ * succeeded. OpenRouter is credit-based, not subscription-based: the account
+ * balance (`total_credits - total_usage`, the documented "get remaining
+ * credits" signal) stands on its own without any key-level cap data.
+ */
+function buildCreditsOnlyQuota(credits: OpenrouterCreditsFields): OpenrouterQuota {
+  const creditBalance =
+    credits.totalCredits !== null && credits.totalUsage !== null
+      ? credits.totalCredits - credits.totalUsage
+      : null;
+  return {
+    used: 0,
+    total: 100,
+    percentUsed: 0,
+    resetAt: null,
+    limitReached: false,
+    limit: null,
+    limitRemaining: null,
+    isFreeTier: false,
+    usage: 0,
+    usageDaily: 0,
+    usageWeekly: 0,
+    usageMonthly: 0,
+    byokUsage: null,
+    includeByokInLimit: false,
+    totalCredits: credits.totalCredits,
+    totalUsage: credits.totalUsage,
+    creditBalance,
+  };
+}
+
 // ─── Free-Window Preflight (#6842) ───────────────────────────────────────────
 
 /**
@@ -294,26 +331,44 @@ export async function fetchOpenrouterQuota(
     const keyUrl = `${OPENROUTER_CONFIG.baseUrl}${OPENROUTER_CONFIG.keyPath}`;
     const keyResult = await fetchJson(keyUrl, apiKey);
 
-    // 401/403 on the key endpoint: token invalid — remove from cache, fail open.
-    if (!keyResult || keyResult.status === 401 || keyResult.status === 403) {
+    const creditsUrl = `${OPENROUTER_CONFIG.baseUrl}${OPENROUTER_CONFIG.creditsPath}`;
+    const creditsResult = await fetchJson(creditsUrl, apiKey);
+
+    // Both endpoints auth-rejected: the token itself is invalid — remove from
+    // cache, fail open. A single-endpoint rejection must NOT discard the other
+    // endpoint's data (see buildCreditsOnlyQuota below).
+    const keyAuthInvalid = !keyResult || keyResult.status === 401 || keyResult.status === 403;
+    const creditsAuthInvalid =
+      !creditsResult || creditsResult.status === 401 || creditsResult.status === 403;
+    if (keyAuthInvalid && creditsAuthInvalid) {
       quotaCache.delete(connectionId);
       return null;
     }
-    if (keyResult.status !== 200) return null;
 
-    const keyFields = parseOpenrouterKeyResponse(keyResult.data);
-    if (!keyFields) return null;
-
-    const creditsUrl = `${OPENROUTER_CONFIG.baseUrl}${OPENROUTER_CONFIG.creditsPath}`;
-    const creditsResult = await fetchJson(creditsUrl, apiKey);
+    const keyFields =
+      keyResult && keyResult.status === 200 ? parseOpenrouterKeyResponse(keyResult.data) : null;
     const creditsFields =
       creditsResult && creditsResult.status === 200
         ? parseOpenrouterCreditsResponse(creditsResult.data)
         : { totalCredits: null, totalUsage: null };
 
-    const quota = buildQuotaFromParts(keyFields, creditsFields);
-    quotaCache.set(connectionId, { quota, fetchedAt: Date.now() });
-    return quota;
+    if (keyFields) {
+      const quota = buildQuotaFromParts(keyFields, creditsFields);
+      quotaCache.set(connectionId, { quota, fetchedAt: Date.now() });
+      return quota;
+    }
+
+    // /key unavailable (rate-limited, transient failure, or unexpected shape).
+    // OpenRouter is credit-based, not subscription-based: the /credits balance
+    // (total_credits - total_usage) is the authoritative remaining-credits
+    // signal on its own and must not be discarded because /key failed.
+    if (creditsFields.totalCredits !== null || creditsFields.totalUsage !== null) {
+      const quota = buildCreditsOnlyQuota(creditsFields);
+      quotaCache.set(connectionId, { quota, fetchedAt: Date.now() });
+      return quota;
+    }
+
+    return null;
   } catch {
     // Network error, timeout, etc. — fail open (graceful "unknown").
     return null;
