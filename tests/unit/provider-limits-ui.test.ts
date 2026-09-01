@@ -278,6 +278,51 @@ test("GLM quota rows are ordered by session, weekly, then monthly", () => {
   );
 });
 
+test("GLM quota rows are ordered by session, weekly, then monthly", () => {
+  const parsed = providerLimitUtils.parseQuotaData("glm", {
+    quotas: {
+      mcp_monthly: { used: 10, total: 100, remainingPercentage: 90 },
+      weekly: { used: 20, total: 100, remainingPercentage: 80 },
+      session: { used: 30, total: 100, remainingPercentage: 70 },
+    },
+  });
+
+  assert.deepEqual(
+    parsed.map((quota) => quota.name),
+    ["session", "weekly", "mcp_monthly"]
+  );
+});
+
+test("OpenRouter credits render as a USD credit count, not a percentage row", () => {
+  const parsed = providerLimitUtils.parseQuotaData("openrouter", {
+    quotas: {
+      free_daily: { used: 0, total: 50, remaining: 50, remainingPercentage: 100 },
+      free_rpm: { used: 0, total: 20, remaining: 20, remainingPercentage: 100 },
+      credits: {
+        used: 0,
+        total: 0,
+        remaining: 231.0973698130001,
+        remainingPercentage: 100,
+        unlimited: true,
+        currency: "USD",
+      },
+    },
+  });
+
+  const credits = parsed.find((quota) => quota.name === "credits");
+  assert.ok(credits, "credits row must survive parsing");
+  assert.equal(credits.isCredits, true, "dollar renderer requires isCredits");
+  assert.equal(credits.creditCount, 231.0973698130001);
+  assert.equal(credits.remaining, 231.0973698130001);
+  assert.equal(credits.currency, "USD");
+  assert.equal(providerLimitUtils.formatQuotaLabel(credits.name), "AI Credits");
+  // Free-tier windows keep the generic percentage treatment.
+  const freeDaily = parsed.find((quota) => quota.name === "free_daily");
+  assert.ok(freeDaily);
+  assert.notEqual(freeDaily.isCredits, true);
+  assert.equal(freeDaily.total, 50);
+});
+
 test("hidden provider models are filtered from per-model quota rows", () => {
   const quotas = providerLimitUtils.parseQuotaData("antigravity", {
     quotas: {
