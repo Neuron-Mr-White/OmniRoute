@@ -229,6 +229,11 @@ test("MiniMax providers are exposed to the limits dashboard support list", () =>
   assert.ok(providerConstants.USAGE_SUPPORTED_PROVIDERS.includes("minimax-cn"));
 });
 
+test("OpenRouter and Devin CLI are exposed to the limits dashboard support list", () => {
+  assert.ok(providerConstants.USAGE_SUPPORTED_PROVIDERS.includes("openrouter"));
+  assert.ok(providerConstants.USAGE_SUPPORTED_PROVIDERS.includes("devin-cli"));
+});
+
 test("MiniMax quota payloads use generic provider parsing and stale resets still refill", () => {
   const future = new Date(Date.now() + 5 * 60_000).toISOString();
   const past = new Date(Date.now() - 5 * 60_000).toISOString();
