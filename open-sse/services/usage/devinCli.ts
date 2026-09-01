@@ -90,34 +90,52 @@ function readVarint(buf: Uint8Array, start: number): { value: number; next: numb
   }
 }
 
+function advancePastFixed(buf: Uint8Array, i: number, size: number): number | null {
+  return i + size > buf.length ? null : i + size;
+}
+
+/** Decode one protobuf field; `{ field: null }` skips fixed64/fixed32 payloads. */
+function decodeOneField(
+  buf: Uint8Array,
+  start: number
+): { field: ProtoField | null; next: number } | null {
+  const tag = readVarint(buf, start);
+  if (!tag) return null;
+  const field = tag.value >>> 3;
+  const wire = tag.value & 7;
+  if (wire === 0) {
+    const v = readVarint(buf, tag.next);
+    if (!v) return null;
+    return { field: { field, varint: v.value, bytes: null }, next: v.next };
+  }
+  if (wire === 2) {
+    const len = readVarint(buf, tag.next);
+    if (!len || len.value > buf.length - len.next) return null;
+    return {
+      field: { field, varint: null, bytes: buf.subarray(len.next, len.next + len.value) },
+      next: len.next + len.value,
+    };
+  }
+  if (wire === 1) {
+    const next = advancePastFixed(buf, tag.next, 8);
+    return next === null ? null : { field: null, next };
+  }
+  if (wire === 5) {
+    const next = advancePastFixed(buf, tag.next, 4);
+    return next === null ? null : { field: null, next };
+  }
+  return null;
+}
+
 /** Walk one protobuf message into (field, value) triples; null on malformed input. */
 export function decodeProtoFields(buf: Uint8Array): ProtoField[] | null {
   const out: ProtoField[] = [];
   let i = 0;
   while (i < buf.length) {
-    const tag = readVarint(buf, i);
-    if (!tag) return null;
-    i = tag.next;
-    const field = tag.value >>> 3;
-    const wire = tag.value & 7;
-    if (wire === 0) {
-      const v = readVarint(buf, i);
-      if (!v) return null;
-      out.push({ field, varint: v.value, bytes: null });
-      i = v.next;
-    } else if (wire === 2) {
-      const len = readVarint(buf, i);
-      if (!len || len.value > buf.length - len.next) return null;
-      out.push({ field, varint: null, bytes: buf.subarray(len.next, len.next + len.value) });
-      i = len.next + len.value;
-    } else if (wire === 1) {
-      if (i + 8 > buf.length) return null;
-      i += 8;
-    } else if (wire === 5) {
-      i += 4;
-    } else {
-      return null;
-    }
+    const step = decodeOneField(buf, i);
+    if (!step) return null;
+    if (step.field) out.push(step.field);
+    i = step.next;
   }
   return out;
 }

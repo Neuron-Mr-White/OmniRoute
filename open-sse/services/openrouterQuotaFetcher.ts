@@ -302,6 +302,36 @@ async function fetchJson(
   }
 }
 
+type EndpointResult = { status: number; data: unknown } | null;
+
+function isAuthRejected(result: EndpointResult): boolean {
+  return !result || result.status === 401 || result.status === 403;
+}
+
+function rememberQuota(connectionId: string, quota: OpenrouterQuota): OpenrouterQuota {
+  quotaCache.set(connectionId, { quota, fetchedAt: Date.now() });
+  return quota;
+}
+
+function mergeOpenrouterResults(
+  keyResult: EndpointResult,
+  creditsResult: EndpointResult
+): OpenrouterQuota | null {
+  const keyFields =
+    keyResult && keyResult.status === 200 ? parseOpenrouterKeyResponse(keyResult.data) : null;
+  const creditsFields =
+    creditsResult && creditsResult.status === 200
+      ? parseOpenrouterCreditsResponse(creditsResult.data)
+      : { totalCredits: null, totalUsage: null };
+  if (keyFields) return buildQuotaFromParts(keyFields, creditsFields);
+  // /key unavailable (rate-limited, transient failure, or unexpected shape).
+  // OpenRouter is credit-based: the /credits balance stands on its own.
+  if (creditsFields.totalCredits !== null || creditsFields.totalUsage !== null) {
+    return buildCreditsOnlyQuota(creditsFields);
+  }
+  return null;
+}
+
 /**
  * Fetch current quota for an OpenRouter connection.
  * Returns quota info based on the /key + /credits API responses.
@@ -328,47 +358,24 @@ export async function fetchOpenrouterQuota(
   try {
     await throttleQuotaFetch();
 
-    const keyUrl = `${OPENROUTER_CONFIG.baseUrl}${OPENROUTER_CONFIG.keyPath}`;
-    const keyResult = await fetchJson(keyUrl, apiKey);
+    const keyResult = await fetchJson(
+      `${OPENROUTER_CONFIG.baseUrl}${OPENROUTER_CONFIG.keyPath}`,
+      apiKey
+    );
+    const creditsResult = await fetchJson(
+      `${OPENROUTER_CONFIG.baseUrl}${OPENROUTER_CONFIG.creditsPath}`,
+      apiKey
+    );
 
-    const creditsUrl = `${OPENROUTER_CONFIG.baseUrl}${OPENROUTER_CONFIG.creditsPath}`;
-    const creditsResult = await fetchJson(creditsUrl, apiKey);
-
-    // Both endpoints auth-rejected: the token itself is invalid — remove from
-    // cache, fail open. A single-endpoint rejection must NOT discard the other
-    // endpoint's data (see buildCreditsOnlyQuota below).
-    const keyAuthInvalid = !keyResult || keyResult.status === 401 || keyResult.status === 403;
-    const creditsAuthInvalid =
-      !creditsResult || creditsResult.status === 401 || creditsResult.status === 403;
-    if (keyAuthInvalid && creditsAuthInvalid) {
+    // Both endpoints auth-rejected: the token itself is invalid — fail open.
+    // A single-endpoint rejection must NOT discard the other endpoint's data.
+    if (isAuthRejected(keyResult) && isAuthRejected(creditsResult)) {
       quotaCache.delete(connectionId);
       return null;
     }
 
-    const keyFields =
-      keyResult && keyResult.status === 200 ? parseOpenrouterKeyResponse(keyResult.data) : null;
-    const creditsFields =
-      creditsResult && creditsResult.status === 200
-        ? parseOpenrouterCreditsResponse(creditsResult.data)
-        : { totalCredits: null, totalUsage: null };
-
-    if (keyFields) {
-      const quota = buildQuotaFromParts(keyFields, creditsFields);
-      quotaCache.set(connectionId, { quota, fetchedAt: Date.now() });
-      return quota;
-    }
-
-    // /key unavailable (rate-limited, transient failure, or unexpected shape).
-    // OpenRouter is credit-based, not subscription-based: the /credits balance
-    // (total_credits - total_usage) is the authoritative remaining-credits
-    // signal on its own and must not be discarded because /key failed.
-    if (creditsFields.totalCredits !== null || creditsFields.totalUsage !== null) {
-      const quota = buildCreditsOnlyQuota(creditsFields);
-      quotaCache.set(connectionId, { quota, fetchedAt: Date.now() });
-      return quota;
-    }
-
-    return null;
+    const quota = mergeOpenrouterResults(keyResult, creditsResult);
+    return quota ? rememberQuota(connectionId, quota) : null;
   } catch {
     // Network error, timeout, etc. — fail open (graceful "unknown").
     return null;
