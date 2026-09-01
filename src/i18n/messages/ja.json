@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "完了したバッチをすべて削除する",
     "batchListBatchesTable": "バッチ",
     "changelogViewerLoading": "GitHub から変更ログを読み込んでいます...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "プロファイルを読み込んでいます...",
     "profileHowToEarn": "稼ぎ方",
     "bootstrapBannerDismiss": "解雇する",
@@ -1291,6 +1292,8 @@
     "discoverySubtitle": "無料アクセス対象のプロバイダーをスキャン",
     "conductor": "指揮者",
     "conductorSubtitle": "CLIエージェントフリート",
+    "orchestration": "オーケストレーション",
+    "orchestrationSubtitle": "実行中のすべてのライブビュー",
     "resilienceConnections": "接続レジリエンス",
     "resilienceConnectionsSubtitle": "クールダウン、ブレーカー、ロックアウト状態",
     "settingsModalityBridge": "モダリティブリッジ",
@@ -1769,7 +1772,8 @@
     "tools": "ツール",
     "agentBridge": "エージェントブリッジ",
     "trafficInspector": "トラフィックインスペクター",
-    "usage": "使用状況"
+    "usage": "使用状況",
+    "orchestration": "オーケストレーション"
   },
   "home": {
     "quickStart": "クイックスタート",
@@ -2936,8 +2940,7 @@
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "カスタムプロバイダーをサポートするWarp AIターミナル",
       "agent-deck": "Agent Deckマルチエージェントオーケストレーター",
-      "5dive": "5dive — セルフホスト型のコーディングエージェント群。1つの認証プロファイルで全体をOmniRouteに向けます",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — セルフホスト型のコーディングエージェント群。1つの認証プロファイルで全体をOmniRouteに向けます"
     },
     "guides": {
       "cursor": {
@@ -6445,7 +6448,12 @@
     "savedModelEndpointSettings": "保存されたモデルエンドポイント設定",
     "searchByModelAria": "モデルで検索",
     "selectSupportedEndpoint": "サポートされているエンドポイントを少なくとも1つ選択してください",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "設定",
@@ -7057,6 +7065,14 @@
     "providerAccountRoutingDesc": "このプロバイダーのグローバルアカウント戦略を上書きします（9router互換）。",
     "providerRoutingStrategy": "アカウント戦略",
     "providerRoutingInheritGlobal": "グローバルデフォルトを継承",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "モデルのエイリアス",
     "modelAliasesTitle": "モデルエイリアス",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -8073,6 +8089,14 @@
     "resilienceProviderCooldownEnabledDesc": "有効にすると、失敗したプロバイダーがグローバルに追跡され、クールダウン期間中スキップされます。",
     "resilienceProviderCooldownMin": "最小クールダウン",
     "resilienceProviderCooldownMax": "最大クールダウン",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Always enabled for {provider} — required for OAuth account safety; cannot be turned off.",
     "forcedFingerprintBadge": "Required",
     "sessionAffinityTitle": "セッションアフィニティ",
@@ -8308,27 +8332,7 @@
     "cliproxyapiHealth": "健康",
     "cliproxyapiPort": "ポート",
     "qdrantHost": "ホスト",
-    "qdrantCollection": "コレクション",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "コレクション"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11294,6 +11298,11 @@
       "copy": "コピー",
       "autoscrollOn": "自動スクロール: オン",
       "autoscrollOff": "自動スクロール: オフ",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "クライアント生リクエスト",
         "clientRequest": "クライアントリクエスト",
@@ -12527,6 +12536,8 @@
     "typeApikey": "APIキー",
     "sortTypeFirst": "簡単な順",
     "sortTypeFirstHelp": "サインアップの手間（サインアップ不要 → OAuthログイン → APIキー）でグループ化し、各グループ内では品質順を維持",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "サインアップ不要 = セットアップ不要 · OAuthログイン = 自身のアカウントでサインイン · APIキー = 自身のキーまたはプロバイダーの無料枠を使用",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12955,6 +12966,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
+    }
+  },
   "comboControl": {
     "title": "Combo Control Center",
     "unavailable": "Combo Control Center unavailable",
@@ -13354,6 +13377,9 @@
     "colContext": "コンテキスト",
     "colCapabilities": "機能",
     "colTos": "ToSリスク",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "新しい",
     "setupGuide": "セットアップガイド",
     "disabledByFeed": "レーダーフィードによって無効化されています",
@@ -13901,6 +13927,41 @@
     "sttFailed": "転写に失敗しました（STTモデル/プロバイダーを確認してください）",
     "ttsFailed": "音声合成に失敗しました（TTSモデル/プロバイダーを確認してください）",
     "micDenied": "マイクが利用できないか、権限が拒否されました"
+  },
+  "orchestration": {
+    "title": "オーケストレーション",
+    "description": "OmniRouteが現在実行しているすべて — エージェント、フリート、ルーティング",
+    "tabAgents": "エージェント",
+    "tabRouting": "ルーティング",
+    "tabOverview": "概要",
+    "showCompleted": "完了を表示",
+    "sourceCloudAgent": "クラウドエージェント",
+    "sourceA2A": "A2A",
+    "sourceConductor": "指揮者",
+    "sourceStale": "{since}から更新なし",
+    "sourceOffline": "オフライン",
+    "stateQueued": "キュー待ち",
+    "stateRunning": "実行中",
+    "stateWaitingApproval": "承認待ち",
+    "stateSucceeded": "成功",
+    "stateFailed": "失敗",
+    "stateCancelled": "キャンセル済み",
+    "overflowMore": "他 {count} 件",
+    "emptyTitle": "まだ何も実行されていません",
+    "emptyCloudAgentCta": "クラウドエージェントを設定",
+    "emptyA2ACta": "A2Aを開く",
+    "emptyConductorCta": "指揮者を開く",
+    "drawerObjective": "目的",
+    "drawerTimeline": "タイムライン",
+    "drawerMetrics": "メトリクス",
+    "drawerResult": "結果",
+    "drawerActions": "アクション",
+    "actionApprove": "プランを承認",
+    "actionCancel": "キャンセル",
+    "actionSeeInGraph": "グラフで表示",
+    "actionDone": "アクションを適用しました",
+    "actionFailed": "アクションが失敗しました: {error}",
+    "mirroredInA2A": "A2Aにミラーリング"
   },
   "cliproxyProviderExposure": {
     "title": "プロバイダーの露出",

@@ -201,7 +201,6 @@ src/
 | `playground/`                            | Playground Studio shared helpers: `codeExport.ts` (curl/Python/TS generator), `promptImprover.ts` (meta-prompt builder), `streamMetrics.ts` (pure TTFT/TPS), `types.ts` (pricing table) — see `docs/frameworks/PLAYGROUND_STUDIO.md`                                                                                    |
 | `webhookDispatcher.ts`                   | HMAC webhook delivery — see `docs/frameworks/WEBHOOKS.md`                                                                                                                                                                                                                                                               |
 | `cloudflaredTunnel.ts`, `ngrokTunnel.ts` | Tunnel managers — see `docs/ops/TUNNELS_GUIDE.md`                                                                                                                                                                                                                                                                       |
-| `oneproxySync.ts`, `oneproxyRotator.ts`  | 1proxy free proxy marketplace — see `docs/ops/PROXY_GUIDE.md`                                                                                                                                                                                                                                                           |
 | `cloudSync.ts`, `initCloudSync.ts`       | Optional cloud sync of state                                                                                                                                                                                                                                                                                            |
 | `localDb.ts`                             | Re-export barrel for db modules (no logic — re-exports only)                                                                                                                                                                                                                                                            |
 | `cacheLayer.ts`, `idempotencyLayer.ts`   | Request caching + idempotency                                                                                                                                                                                                                                                                                           |
@@ -403,24 +402,24 @@ open-sse/
 
 ### Subsystem deep-dives
 
-| Doc                        | Purpose                                                             |
-| -------------------------- | ------------------------------------------------------------------- |
-| `MCP-SERVER.md`            | MCP server: 110 tools, 3 transports, 33 scopes, REST endpoints      |
-| `A2A-SERVER.md`            | A2A v0.3: JSON-RPC, 6 skills, REST helpers, agent card              |
-| `AGENT_PROTOCOLS_GUIDE.md` | Unified guide: A2A vs ACP vs Cloud Agents                           |
-| `CLOUD_AGENT.md`           | Codex Cloud / Devin / Jules orchestration                           |
-| `SKILLS.md`                | Skills framework (built-in + marketplace + SkillsSH + sandbox)      |
-| `RADAR.md`                 | Radar free-model catalog overlay (`RADAR_ENABLED`, off by default)  |
-| `MEMORY.md`                | Memory system (SQLite FTS5 + Qdrant)                                |
-| `EVALS.md`                 | Eval framework (suites, runs, rubrics)                              |
-| `GUARDRAILS.md`            | PII masker, prompt injection, vision bridge                         |
-| `COMPLIANCE.md`            | Audit log, retention, noLog opt-out                                 |
-| `WEBHOOKS.md`              | HMAC-signed webhook delivery                                        |
-| `REASONING_REPLAY.md`      | Hybrid memory/SQLite cache for `reasoning_content`                  |
-| `AUTHZ_GUIDE.md`           | Authorization pipeline (`classify` → `policies` → `enforce`)        |
-| `RESILIENCE_GUIDE.md`      | Circuit breaker + cooldown + model lockout                          |
-| `STEALTH_GUIDE.md`         | TLS fingerprinting (JA3/JA4), Claude Code CCH, MITM cert            |
-| `AUTO-COMBO.md`            | Auto Combo engine (9-factor scoring, 4 mode packs, virtual factory) |
+| Doc                        | Purpose                                                              |
+| -------------------------- | -------------------------------------------------------------------- |
+| `MCP-SERVER.md`            | MCP server: 110 tools, 3 transports, 33 scopes, REST endpoints       |
+| `A2A-SERVER.md`            | A2A v0.3: JSON-RPC, 6 skills, REST helpers, agent card               |
+| `AGENT_PROTOCOLS_GUIDE.md` | Unified guide: A2A vs ACP vs Cloud Agents                            |
+| `CLOUD_AGENT.md`           | Codex Cloud / Devin / Jules orchestration                            |
+| `SKILLS.md`                | Skills framework (built-in + marketplace + SkillsSH + sandbox)       |
+| `RADAR.md`                 | Radar free-model catalog overlay (`RADAR_ENABLED`, off by default)   |
+| `MEMORY.md`                | Memory system (SQLite FTS5 + Qdrant)                                 |
+| `EVALS.md`                 | Eval framework (suites, runs, rubrics)                               |
+| `GUARDRAILS.md`            | PII masker, prompt injection, vision bridge                          |
+| `COMPLIANCE.md`            | Audit log, retention, noLog opt-out                                  |
+| `WEBHOOKS.md`              | HMAC-signed webhook delivery                                         |
+| `REASONING_REPLAY.md`      | Hybrid memory/SQLite cache for `reasoning_content`                   |
+| `AUTHZ_GUIDE.md`           | Authorization pipeline (`classify` → `policies` → `enforce`)         |
+| `RESILIENCE_GUIDE.md`      | Circuit breaker + cooldown + model lockout                           |
+| `STEALTH_GUIDE.md`         | TLS fingerprinting (JA3/JA4), Claude Code CCH, MITM cert             |
+| `AUTO-COMBO.md`            | Auto Combo engine (15-factor scoring, 6 mode packs, virtual factory) |
 
 ### Compression
 

@@ -1580,12 +1580,12 @@ export async function handleChatCore({
             await import("../services/compression/outputStyles/backCompat.ts");
           const selection = resolveOutputStyleSelection(config);
           if (selection.length > 0) {
-            const { applyOutputStyles } =
+            const { applyOutputStyles, resolveOutputStyleLanguage } =
               await import("../services/compression/outputStyles/apply.ts");
-            const outputStyleLanguage =
-              config.languageConfig?.enabled === true
-                ? config.languageConfig.defaultLanguage
-                : "en";
+            const outputStyleLanguage = resolveOutputStyleLanguage(
+              config.languageConfig,
+              body as Parameters<typeof resolveOutputStyleLanguage>[1]
+            );
             outputStyleResult = applyOutputStyles(
               body as Parameters<typeof applyOutputStyles>[0],
               selection,

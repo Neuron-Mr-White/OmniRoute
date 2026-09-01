@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "पूर्ण झालेल्या सर्व बॅचेस हटवा",
     "batchListBatchesTable": "बॅचेस",
     "changelogViewerLoading": "GitHub वरून चेंजलॉग लोड करत आहे...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "प्रोफाइल लोड करत आहे...",
     "profileHowToEarn": "कसे कमवायचे",
     "bootstrapBannerDismiss": "डिसमिस करा",
@@ -1291,6 +1292,8 @@
     "discoverySubtitle": "मोफत ॲक्सेससाठी प्रोव्हायडर्स स्कॅन करा",
     "conductor": "संवहनकर्ता",
     "conductorSubtitle": "CLI-एजंट फ्लीट",
+    "orchestration": "ऑर्केस्ट्रेशन",
+    "orchestrationSubtitle": "चालू असलेल्या प्रत्येक गोष्टीचे थेट दृश्य",
     "resilienceConnections": "कनेक्शन लवचिकता",
     "resilienceConnectionsSubtitle": "कूलडाउन, ब्रेकर, लॉकआउट स्थिती",
     "settingsModalityBridge": "मोडालिटी ब्रिज",
@@ -1769,7 +1772,8 @@
     "tools": "साधने",
     "agentBridge": "एजंट ब्रिज",
     "trafficInspector": "ट्रॅफिक इन्स्पेक्टर",
-    "usage": "वापर"
+    "usage": "वापर",
+    "orchestration": "ऑर्केस्ट्रेशन"
   },
   "home": {
     "quickStart": "Quick Start",
@@ -2936,8 +2940,7 @@
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "कस्टम प्रोव्हायडर सपोर्टसह Warp AI टर्मिनल",
       "agent-deck": "Agent Deck मल्टी-एजंट ऑर्केस्ट्रेटर",
-      "5dive": "5dive — स्वयं-होस्टेड कोडिंग एजंट्सचा ताफा; एक auth प्रोफाइल सर्वांना OmniRoute कडे निर्देशित करते",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — स्वयं-होस्टेड कोडिंग एजंट्सचा ताफा; एक auth प्रोफाइल सर्वांना OmniRoute कडे निर्देशित करते"
     },
     "guides": {
       "cursor": {
@@ -6445,7 +6448,12 @@
     "savedModelEndpointSettings": "सुरक्षित केलेल्या मॉडेल एंडपॉइंट सेटिंग्ज",
     "searchByModelAria": "मॉडेलद्वारे शोधा",
     "selectSupportedEndpoint": "किमान एक समर्थित एंडपॉइंट निवडा",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Settings",
@@ -7057,6 +7065,14 @@
     "providerAccountRoutingDesc": "या प्रदात्यासाठी ग्लोबल खाते धोरण ओव्हरराइड करा (9router पॅरिटी).",
     "providerRoutingStrategy": "खाते धोरण",
     "providerRoutingInheritGlobal": "ग्लोबल डीफॉल्ट इनहेरिट करा",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Model Aliases",
     "modelAliasesTitle": "Model Aliases",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -8073,6 +8089,14 @@
     "resilienceProviderCooldownEnabledDesc": "सक्षम केल्यावर, अयशस्वी प्रदात्यांचा जागतिक स्तरावर मागोवा घेतला जातो आणि कूलडाउन कालावधीसाठी ते वगळले जातात.",
     "resilienceProviderCooldownMin": "किमान कूलडाउन",
     "resilienceProviderCooldownMax": "कमाल कूलडाउन",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Always enabled for {provider} — required for OAuth account safety; cannot be turned off.",
     "forcedFingerprintBadge": "Required",
     "sessionAffinityTitle": "सत्र एफिनिटी",
@@ -8308,27 +8332,7 @@
     "cliproxyapiHealth": "आरोग्य",
     "cliproxyapiPort": "पोर्ट",
     "qdrantHost": "होस्ट",
-    "qdrantCollection": "संग्रह",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "संग्रह"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11294,6 +11298,11 @@
       "copy": "कॉपी",
       "autoscrollOn": "ऑटोस्क्रोल: चालू",
       "autoscrollOff": "ऑटोस्क्रोल: बंद",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "क्लायंट कच्चा विनंती",
         "clientRequest": "ग्राहक विनंती",
@@ -12527,6 +12536,8 @@
     "typeApikey": "API की",
     "sortTypeFirst": "सर्वात सोपे आधी",
     "sortTypeFirstHelp": "साइन-अपच्या त्रासानुसार गटबद्ध करा (साइन-अप नाही → OAuth लॉगिन → API की), प्रत्येक गटामध्ये गुणवत्तेचा क्रम राखून",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "साइन-अप नाही = शून्य सेटअप · OAuth लॉगिन = तुमच्या स्वतःच्या खात्याने साइन इन करा · API की = तुमची स्वतःची की आणा किंवा त्या प्रदात्याची विनामूल्य श्रेणी वापरा",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12955,6 +12966,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
+    }
+  },
   "comboControl": {
     "title": "कॉम्बो नियंत्रण केंद्र",
     "unavailable": "कॉम्बो नियंत्रण केंद्र अनुपलब्ध",
@@ -13354,6 +13377,9 @@
     "colContext": "संदर्भ",
     "colCapabilities": "क्षमता",
     "colTos": "ToS धोका",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "नवीन",
     "setupGuide": "सेटअप मार्गदर्शक",
     "disabledByFeed": "रडार फीडद्वारे अक्षम",
@@ -13901,6 +13927,41 @@
     "sttFailed": "ट्रान्सक्रिप्शन अयशस्वी झाले (STT मॉडेल/प्रदात्याची तपासणी करा)",
     "ttsFailed": "भाषण संश्लेषण अयशस्वी झाले (TTS मॉडेल/प्रदाता तपासा)",
     "micDenied": "मायक्रोफोन उपलब्ध नाही किंवा परवानगी नाकारली आहे"
+  },
+  "orchestration": {
+    "title": "ऑर्केस्ट्रेशन",
+    "description": "OmniRoute आत्ता जे काही चालवत आहे — एजंट, फ्लीट आणि राउटिंग",
+    "tabAgents": "एजंट",
+    "tabRouting": "राउटिंग",
+    "tabOverview": "आढावा",
+    "showCompleted": "पूर्ण झालेले दाखवा",
+    "sourceCloudAgent": "क्लाउड एजंट",
+    "sourceA2A": "A2A",
+    "sourceConductor": "संवहनकर्ता",
+    "sourceStale": "{since} पासून जुने",
+    "sourceOffline": "ऑफलाइन",
+    "stateQueued": "रांगेत",
+    "stateRunning": "सुरू आहे",
+    "stateWaitingApproval": "मंजुरीची वाट पाहत आहे",
+    "stateSucceeded": "यशस्वी",
+    "stateFailed": "अयशस्वी",
+    "stateCancelled": "रद्द केले",
+    "overflowMore": "+{count} अधिक",
+    "emptyTitle": "अजून काहीही सुरू नाही",
+    "emptyCloudAgentCta": "क्लाउड एजंट सेट करा",
+    "emptyA2ACta": "A2A उघडा",
+    "emptyConductorCta": "संवहनकर्ता उघडा",
+    "drawerObjective": "उद्दिष्ट",
+    "drawerTimeline": "टाइमलाइन",
+    "drawerMetrics": "मेट्रिक्स",
+    "drawerResult": "निकाल",
+    "drawerActions": "क्रिया",
+    "actionApprove": "योजना मंजूर करा",
+    "actionCancel": "रद्द करा",
+    "actionSeeInGraph": "आलेखात पहा",
+    "actionDone": "क्रिया लागू केली",
+    "actionFailed": "क्रिया अयशस्वी: {error}",
+    "mirroredInA2A": "A2A मध्ये प्रतिबिंबित"
   },
   "cliproxyProviderExposure": {
     "title": "प्रदाता प्रदर्शन",

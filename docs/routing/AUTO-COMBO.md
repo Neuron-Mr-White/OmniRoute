@@ -212,26 +212,35 @@ The Auto-Combo Engine dynamically selects the best provider/model for each reque
 
 ## Mode Packs
 
-Six pre-defined weight profiles in `open-sse/services/autoCombo/modePacks.ts` — `ship-fast`, `cost-saver`, `quality-first`, `offline-friendly`, `reliability-first` and `chaos-mode` (fault-injection). Each pack overrides the default weights to bias selection toward a specific goal; the seed weights below are renormalized to sum 1.0 at runtime together with the session/context factors every pack also sets. The table shows the four original packs — see `modePacks.ts` for `reliability-first` and `chaos-mode`.
+6 pre-defined weight profiles in `open-sse/services/autoCombo/modePacks.ts`. Each pack replaces the default weights outright to bias selection toward one goal. Every pack already sums to `1.0` (`0.9999` as printed at four decimals), so `normalizeScoringWeights()` has nothing meaningful to correct when a pack is active — the values below are, to rounding, the ones the scorer applies.
 
-| Factor       | ship-fast | cost-saver | quality-first | offline-friendly |
-| :----------- | :-------- | :--------- | :------------ | :--------------- |
-| quota        | 0.14      | 0.14       | 0.10          | **0.37**         |
-| health       | 0.28      | 0.19       | 0.18          | 0.28             |
-| costInv      | 0.05      | **0.37**   | 0.05          | 0.10             |
-| latencyInv   | **0.32**  | 0.05       | 0.05          | 0.05             |
-| taskFit      | 0.10      | 0.10       | **0.37**      | 0.00             |
-| stability    | 0.00      | 0.05       | 0.15          | 0.10             |
-| tierPriority | 0.05      | 0.05       | 0.05          | 0.05             |
+| Factor                | ship-fast  | cost-saver | quality-first | offline-friendly | reliability-first | chaos-mode |
+| :-------------------- | :--------- | :--------- | :------------ | :--------------- | :---------------- | :--------- |
+| `quota`               | 0.1333     | 0.1333     | 0.0952        | **0.3524**       | 0.1333            | 0.0476     |
+| `health`              | 0.2667     | 0.1810     | 0.1714        | 0.2667           | **0.3524**        | **0.4000** |
+| `costInv`             | 0.0476     | **0.3524** | 0.0476        | 0.0952           | 0.0381            | 0.0190     |
+| `latencyInv`          | **0.3048** | 0.0476     | 0.0476        | 0.0476           | 0.0476            | 0.0286     |
+| `taskFit`             | 0.0952     | 0.0952     | **0.3524**    | 0.0000           | 0.0952            | 0.1905     |
+| `stability`           | 0.0000     | 0.0476     | 0.1429        | 0.0952           | 0.1905            | 0.1714     |
+| `tierPriority`        | 0.0476     | 0.0476     | 0.0476        | 0.0476           | 0.0476            | 0.0190     |
+| `tierAffinity`        | 0.0000     | 0.0000     | 0.0000        | 0.0000           | 0.0000            | 0.0000     |
+| `specificityMatch`    | 0.0000     | 0.0000     | 0.0000        | 0.0000           | 0.0000            | 0.0000     |
+| `contextAffinity`     | 0.0095     | 0.0000     | 0.0000        | 0.0000           | 0.0000            | 0.0286     |
+| `sessionAvailability` | 0.0476     | 0.0476     | 0.0476        | 0.0476           | 0.0476            | 0.0476     |
+| `resetWindowAffinity` | 0.0000     | 0.0000     | 0.0000        | 0.0000           | 0.0000            | 0.0000     |
+| `connectionDensity`   | 0.0476     | 0.0476     | 0.0476        | 0.0476           | 0.0476            | 0.0476     |
 
 Notes:
 
-- `tierAffinity` and `specificityMatch` are explicitly set to `0` in every mode pack.
+- **No pack sets `quality`, and a pack replaces the weight map wholesale** (`weights = pack`, not a merge). `quality` carries `0.03` in `DEFAULT_WEIGHTS`, but under any mode pack it normalizes to `0` — selecting a pack silences the observed-quality signal completely. If you want quality feedback to influence routing, leave `modePack` unset and tune the weights directly. (`cacheAffinity` is also unset by every pack, but it defaults to `0` anyway, so nothing changes there.)
+- `tierAffinity`, `specificityMatch` and `resetWindowAffinity` are explicitly `0` in every pack.
 - Each pack's emphasis at a glance:
-  - **ship-fast** → latencyInv 0.32 + health 0.28 (low-latency, healthy connections)
-  - **cost-saver** → costInv 0.37 (cheapest tokens win)
-  - **quality-first** → taskFit 0.37 + stability 0.15 (best model for the task, consistent)
-  - **offline-friendly** → quota 0.37 + health 0.28 (max headroom regardless of speed/cost)
+  - **ship-fast** → latencyInv 0.3048 + health 0.2667 (low-latency, healthy connections)
+  - **cost-saver** → costInv 0.3524 (cheapest tokens win)
+  - **quality-first** → taskFit 0.3524 + stability 0.1429 (best model for the task, consistent)
+  - **offline-friendly** → quota 0.3524 + health 0.2667 (max headroom regardless of speed/cost)
+  - **reliability-first** → health 0.3524 + stability 0.1905 (fewest surprises)
+  - **chaos-mode** → health 0.4000 + taskFit 0.1905 (fault-injection profile)
 
 ### Per-Request Controls (headers) — #6023 / #6024 / #6025 / #3470
 
@@ -288,6 +297,26 @@ OmniRoute's combo engine supports **19 routing strategies** (declared in `src/sh
 | `pipeline`          | Run targets sequentially, threading each step's output into the next step's input; only the final answer is returned (#6396)                                                              |
 
 ⭐ = New in v3.8.0 · 🧬 = New in v3.8.36
+
+### `weighted` semantics
+
+`weighted` is a **proportional random draw per request**
+(`open-sse/services/combo/targetSorters.ts` → `selectWeightedTarget`), not an equalizer:
+
+- Each request draws **one** step with probability `weight / totalWeight`; the remaining steps
+  are ordered by descending weight as the fallback chain for that request.
+- A step whose weight is `0` (or missing) is **never drawn** while any other step has a
+  weight > 0 — it can only serve as a fallback after the drawn step fails. Only when **all**
+  weights are 0 does selection become uniform.
+- Steps whose targets are all unavailable — provider circuit breaker `OPEN`, connection
+  cooldown, model lockout — are removed from the draw before it happens
+  (`open-sse/services/combo/targetResolution.ts`), so a single healthy step can temporarily
+  win every request.
+- `stickyWeightedLimit` (combo config, default `1` = off) pins the drawn step for that many
+  consecutive successes before re-drawing.
+
+For strict rotation use `round-robin`; equal weights on `weighted` give statistical — not
+strict — balance.
 
 ## Fusion Strategy
 
@@ -733,15 +762,15 @@ intentionally excluded from CI because they require live credentials and VPS acc
 
 ## Files
 
-| File                                                      | Purpose                                                                    |
-| :-------------------------------------------------------- | :------------------------------------------------------------------------- |
-| `open-sse/services/autoCombo/scoring.ts`                  | 15-factor scoring function, `DEFAULT_WEIGHTS`, pool norm                   |
-| `open-sse/services/autoCombo/taskFitness.ts`              | Model × task fitness lookup                                                |
-| `open-sse/services/autoCombo/engine.ts`                   | Selection logic, bandit, budget cap                                        |
-| `open-sse/services/autoCombo/selfHealing.ts`              | Exclusion, probes, incident mode                                           |
-| `open-sse/services/autoCombo/modePacks.ts`                | 4 weight profiles (ship-fast, cost-saver, quality-first, offline-friendly) |
-| `open-sse/services/autoCombo/autoPrefix.ts`               | `auto/` prefix parser + 6 variants                                         |
-| `open-sse/services/autoCombo/virtualFactory.ts`           | Builds in-memory `AutoComboConfig` from live connections                   |
-| `open-sse/services/autoCombo/providerRegistryAccessor.ts` | Test hook for mocking provider registry                                    |
-| `src/shared/constants/routingStrategies.ts`               | `ROUTING_STRATEGY_VALUES` (19 strategies)                                  |
-| `src/sse/handlers/chat.ts`                                | Integration: auto-prefix short-circuit                                     |
+| File                                                      | Purpose                                                                                                   |
+| :-------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- |
+| `open-sse/services/autoCombo/scoring.ts`                  | 15-factor scoring function, `DEFAULT_WEIGHTS`, pool norm                                                  |
+| `open-sse/services/autoCombo/taskFitness.ts`              | Model × task fitness lookup                                                                               |
+| `open-sse/services/autoCombo/engine.ts`                   | Selection logic, bandit, budget cap                                                                       |
+| `open-sse/services/autoCombo/selfHealing.ts`              | Exclusion, probes, incident mode                                                                          |
+| `open-sse/services/autoCombo/modePacks.ts`                | 6 weight profiles (ship-fast, cost-saver, quality-first, offline-friendly, reliability-first, chaos-mode) |
+| `open-sse/services/autoCombo/autoPrefix.ts`               | `auto/` prefix parser + 6 variants                                                                        |
+| `open-sse/services/autoCombo/virtualFactory.ts`           | Builds in-memory `AutoComboConfig` from live connections                                                  |
+| `open-sse/services/autoCombo/providerRegistryAccessor.ts` | Test hook for mocking provider registry                                                                   |
+| `src/shared/constants/routingStrategies.ts`               | `ROUTING_STRATEGY_VALUES` (19 strategies)                                                                 |
+| `src/sse/handlers/chat.ts`                                | Integration: auto-prefix short-circuit                                                                    |

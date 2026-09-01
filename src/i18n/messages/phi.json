@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Tanggalin ang lahat ng nakumpletong batch",
     "batchListBatchesTable": "Mga batch",
     "changelogViewerLoading": "Nilo-load ang changelog mula sa GitHub...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "Nilo-load ang profile...",
     "profileHowToEarn": "Paano kumita",
     "bootstrapBannerDismiss": "I-dismiss",
@@ -1291,6 +1292,8 @@
     "discoverySubtitle": "I-scan ang mga provider para sa libreng access",
     "conductor": "Konduktor",
     "conductorSubtitle": "CLI-agent fleet",
+    "orchestration": "Orkestrasyon",
+    "orchestrationSubtitle": "Live na tanawin ng lahat ng tumatakbo",
     "resilienceConnections": "Katatagan ng Koneksyon",
     "resilienceConnectionsSubtitle": "Cooldown, breaker, katayuan ng lockout",
     "settingsModalityBridge": "Modality Bridge",
@@ -1769,7 +1772,8 @@
     "tools": "Mga Tool",
     "agentBridge": "Agent Bridge",
     "trafficInspector": "Traffic Inspector",
-    "usage": "Paggamit"
+    "usage": "Paggamit",
+    "orchestration": "Orkestrasyon"
   },
   "home": {
     "quickStart": "Mabilis na Pagsisimula",
@@ -2936,8 +2940,7 @@
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Warp AI terminal na may suporta sa custom provider",
       "agent-deck": "Agent Deck multi-agent orchestrator",
-      "5dive": "5dive — self-hosted fleet ng coding agents; isang auth profile ang nagtuturo sa kanilang lahat sa OmniRoute",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — self-hosted fleet ng coding agents; isang auth profile ang nagtuturo sa kanilang lahat sa OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -6445,7 +6448,12 @@
     "savedModelEndpointSettings": "Naka-save na mga setting ng endpoint ng modelo",
     "searchByModelAria": "Maghanap ayon sa modelo",
     "selectSupportedEndpoint": "Pumili ng hindi bababa sa isang sinusuportahang endpoint",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Mga setting",
@@ -7057,6 +7065,14 @@
     "providerAccountRoutingDesc": "I-override ang pandaigdigang diskarte sa account para sa provider na ito (pagkakatugma sa 9router).",
     "providerRoutingStrategy": "Diskarte sa account",
     "providerRoutingInheritGlobal": "Inherit ang pandaigdigang default",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Mga Alyas ng Modelo",
     "modelAliasesTitle": "Mga Alias ng Model",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -8073,6 +8089,14 @@
     "resilienceProviderCooldownEnabledDesc": "Kapag pinagana, ang mga nabigong provider ay sinusubaybayan nang global at nilalaktawan para sa isang panahon ng cooldown.",
     "resilienceProviderCooldownMin": "Minimum na cooldown",
     "resilienceProviderCooldownMax": "Maximum na cooldown",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Always enabled for {provider} — required for OAuth account safety; cannot be turned off.",
     "forcedFingerprintBadge": "Required",
     "sessionAffinityTitle": "Session affinity",
@@ -8308,27 +8332,7 @@
     "cliproxyapiHealth": "Kalusugan",
     "cliproxyapiPort": "Port",
     "qdrantHost": "Host",
-    "qdrantCollection": "Koleksyon",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "Koleksyon"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11294,6 +11298,11 @@
       "copy": "Kopyahin",
       "autoscrollOn": "Autoscroll: naka-on",
       "autoscrollOff": "Autoscroll: patay",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "Kliyentong Hilaw na Kahilingan",
         "clientRequest": "Hiling ng Kliyente",
@@ -12527,6 +12536,8 @@
     "typeApikey": "API Key",
     "sortTypeFirst": "Pinakamadali muna",
     "sortTypeFirstHelp": "I-grupo ayon sa hirap ng pag-signup (Walang Signup → OAuth Login → API Key), habang pinapanatili ang pagkakasunod-sunod ng kalidad sa bawat grupo",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Walang Signup = zero setup · OAuth Login = mag-sign in gamit ang sarili mong account · API Key = magdala ng sarili mong key o ang libreng tier ng provider na iyon",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12955,6 +12966,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
+    }
+  },
   "comboControl": {
     "title": "Combo Control Center",
     "unavailable": "Hindi available ang Combo Control Center",
@@ -13354,6 +13377,9 @@
     "colContext": "Context",
     "colCapabilities": "Capabilities",
     "colTos": "ToS Risk",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "new",
     "setupGuide": "Setup guide",
     "disabledByFeed": "Disabled by Radar feed",
@@ -13901,6 +13927,41 @@
     "sttFailed": "Nabigo ang transcription (suriin ang modelo/tagapagbigay ng STT)",
     "ttsFailed": "Nabigo ang pagsasalin ng pagsasalita (suriin ang TTS modelo/tagapagbigay)",
     "micDenied": "Hindi magagamit ang mikropono o tinanggihan ang pahintulot"
+  },
+  "orchestration": {
+    "title": "Orkestrasyon",
+    "description": "Lahat ng pinapatakbo ng OmniRoute ngayon — mga ahente, fleet, at routing",
+    "tabAgents": "Mga Ahente",
+    "tabRouting": "Routing",
+    "tabOverview": "Pangkalahatang-ideya",
+    "showCompleted": "Ipakita ang mga natapos na",
+    "sourceCloudAgent": "Cloud Agent",
+    "sourceA2A": "A2A",
+    "sourceConductor": "Konduktor",
+    "sourceStale": "Luma na simula {since}",
+    "sourceOffline": "Offline",
+    "stateQueued": "Nakapila",
+    "stateRunning": "Tumatakbo",
+    "stateWaitingApproval": "Naghihintay ng Pag-apruba",
+    "stateSucceeded": "Matagumpay",
+    "stateFailed": "Nabigo",
+    "stateCancelled": "Kinansela",
+    "overflowMore": "+{count} pa",
+    "emptyTitle": "Wala pang tumatakbo",
+    "emptyCloudAgentCta": "I-set up ang Cloud Agents",
+    "emptyA2ACta": "Buksan ang A2A",
+    "emptyConductorCta": "Buksan ang Konduktor",
+    "drawerObjective": "Layunin",
+    "drawerTimeline": "Timeline",
+    "drawerMetrics": "Mga Sukatan",
+    "drawerResult": "Resulta",
+    "drawerActions": "Mga Aksyon",
+    "actionApprove": "Aprubahan ang plano",
+    "actionCancel": "Kanselahin",
+    "actionSeeInGraph": "Tingnan sa graph",
+    "actionDone": "Naisagawa ang aksyon",
+    "actionFailed": "Nabigo ang aksyon: {error}",
+    "mirroredInA2A": "Naka-mirror sa A2A"
   },
   "cliproxyProviderExposure": {
     "title": "Provider Exposure",

@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Odstraňte všechny dokončené dávky",
     "batchListBatchesTable": "Dávky",
     "changelogViewerLoading": "Načítání protokolu změn z GitHubu...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "Načítání profilu...",
     "profileHowToEarn": "Jak vydělat",
     "bootstrapBannerDismiss": "Odmítnout",
@@ -1291,6 +1292,8 @@
     "discoverySubtitle": "Skenovat poskytovatele pro bezplatný přístup",
     "conductor": "Konduktor",
     "conductorSubtitle": "CLI-agent flotila",
+    "orchestration": "Orchestrace",
+    "orchestrationSubtitle": "Živý přehled všeho, co běží",
     "resilienceConnections": "Odolnost Připojení",
     "resilienceConnectionsSubtitle": "Cooldown, jistič, stav uzamčení",
     "settingsModalityBridge": "Modální Most",
@@ -1769,7 +1772,8 @@
     "tools": "Nástroje",
     "agentBridge": "Agent Bridge",
     "trafficInspector": "Inspektor provozu",
-    "usage": "Využití"
+    "usage": "Využití",
+    "orchestration": "Orchestrace"
   },
   "home": {
     "quickStart": "Rychlý start",
@@ -2936,8 +2940,7 @@
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "AI terminál Warp s podporou vlastních poskytovatelů",
       "agent-deck": "Multiagentní orchestrátor Agent Deck",
-      "5dive": "5dive — vlastní flotila kódovacích agentů; jeden auth profil nasměruje všechny na OmniRoute",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — vlastní flotila kódovacích agentů; jeden auth profil nasměruje všechny na OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -6445,7 +6448,12 @@
     "savedModelEndpointSettings": "Nastavení koncového bodu uloženého modelu",
     "searchByModelAria": "Hledat podle modelu",
     "selectSupportedEndpoint": "Vyberte alespoň jeden podporovaný koncový bod",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Nastavení",
@@ -7057,6 +7065,14 @@
     "providerAccountRoutingDesc": "Přepsat globální strategii účtu pro tohoto poskytovatele (parita s 9router).",
     "providerRoutingStrategy": "Strategie účtu",
     "providerRoutingInheritGlobal": "Převzít globální výchozí",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Aliasy modelů",
     "modelAliasesTitle": "Aliasy modelů",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -8073,6 +8089,14 @@
     "resilienceProviderCooldownEnabledDesc": "Pokud je povoleno, selhaní poskytovatelé jsou sledováni globálně a po dobu cooldownu jsou přeskakováni.",
     "resilienceProviderCooldownMin": "Minimální cooldown",
     "resilienceProviderCooldownMax": "Maximální cooldown",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Vždy aktivní pro {provider} — vyžadováno pro bezpečnost OAuth účtu; nelze vypnout.",
     "forcedFingerprintBadge": "Vyžadováno",
     "sessionAffinityTitle": "Afinita relací",
@@ -8308,27 +8332,7 @@
     "cliproxyapiHealth": "Zdraví",
     "cliproxyapiPort": "Port",
     "qdrantHost": "Host",
-    "qdrantCollection": "Kolekce",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "Kolekce"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11294,6 +11298,11 @@
       "copy": "Kopírovat",
       "autoscrollOn": "Automatické posouvání: zapnuto",
       "autoscrollOff": "Automatické posouvání: vypnuto",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "Klientský Raw Request",
         "clientRequest": "Žádost klienta",
@@ -12527,6 +12536,8 @@
     "typeApikey": "Klíč API",
     "sortTypeFirst": "Nejjednodušší jako první",
     "sortTypeFirstHelp": "Seskupit podle náročnosti registrace (Bez registrace → Přihlášení přes OAuth → Klíč API) při zachování pořadí kvality v rámci každé skupiny",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Bez registrace = nulové nastavení · Přihlášení přes OAuth = přihlášení vlastním účtem · Klíč API = vlastní klíč nebo bezplatný tarif poskytovatele",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12955,6 +12966,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
+    }
+  },
   "comboControl": {
     "title": "Combo Control Center",
     "unavailable": "Ovládací centrum komb je nedostupné",
@@ -13354,6 +13377,9 @@
     "colContext": "Kontext",
     "colCapabilities": "Schopnosti",
     "colTos": "Riziko ToS",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "nové",
     "setupGuide": "Průvodce nastavením",
     "disabledByFeed": "Zakázáno zdrojem Radar",
@@ -13901,6 +13927,41 @@
     "sttFailed": "Přepis selhal (zkontrolujte model/poskytovatele STT)",
     "ttsFailed": "Selhání syntézy řeči (zkontrolujte model/poskytovatele TTS)",
     "micDenied": "Mikrofon není k dispozici nebo bylo odepřeno povolení"
+  },
+  "orchestration": {
+    "title": "Orchestrace",
+    "description": "Vše, co OmniRoute právě spouští — agenti, flotila a směrování",
+    "tabAgents": "Agenti",
+    "tabRouting": "Směrování",
+    "tabOverview": "Přehled",
+    "showCompleted": "Zobrazit dokončené",
+    "sourceCloudAgent": "Cloudový agent",
+    "sourceA2A": "A2A",
+    "sourceConductor": "Konduktor",
+    "sourceStale": "Neaktuální od {since}",
+    "sourceOffline": "Offline",
+    "stateQueued": "Ve frontě",
+    "stateRunning": "Běží",
+    "stateWaitingApproval": "Čeká na schválení",
+    "stateSucceeded": "Úspěšné",
+    "stateFailed": "Selhalo",
+    "stateCancelled": "Zrušeno",
+    "overflowMore": "+{count} další",
+    "emptyTitle": "Zatím nic neběží",
+    "emptyCloudAgentCta": "Nastavit cloudové agenty",
+    "emptyA2ACta": "Otevřít A2A",
+    "emptyConductorCta": "Otevřít Konduktor",
+    "drawerObjective": "Cíl",
+    "drawerTimeline": "Časová osa",
+    "drawerMetrics": "Metriky",
+    "drawerResult": "Výsledek",
+    "drawerActions": "Akce",
+    "actionApprove": "Schválit plán",
+    "actionCancel": "Zrušit",
+    "actionSeeInGraph": "Zobrazit v grafu",
+    "actionDone": "Akce provedena",
+    "actionFailed": "Akce selhala: {error}",
+    "mirroredInA2A": "Zrcadleno v A2A"
   },
   "cliproxyProviderExposure": {
     "title": "Expozice Poskytovatele",

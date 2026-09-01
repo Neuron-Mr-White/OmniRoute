@@ -54,10 +54,10 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 OmniRoute answers "is it free?" through two regimes that intentionally read
 different sources:
 
-| Regime | Source of truth | Surfaces |
-|---|---|---|
-| **Counting / displaying** | Resolved catalog — the shipped baseline overlaid by the Radar feed (`getRadarCatalog`) | Free-tier totals, budget card, dashboards |
-| **Deciding** | Shipped catalog only (`FREE_MODEL_BUDGETS` in `open-sse/config/freeModelCatalog.data.ts`) plus the local heuristics (`:free` suffix, zero pricing, `grantsFreeAccess`) | Every consumer of `src/shared/utils/freeModels.ts`: model import, `auto/*` routing, `GET /v1/models`, and the browser previews |
+| Regime                    | Source of truth                                                                                                                                                        | Surfaces                                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Counting / displaying** | Resolved catalog — the shipped baseline overlaid by the Radar feed (`getRadarCatalog`)                                                                                 | Free-tier totals, budget card, dashboards                                                                                      |
+| **Deciding**              | Shipped catalog only (`FREE_MODEL_BUDGETS` in `open-sse/config/freeModelCatalog.data.ts`) plus the local heuristics (`:free` suffix, zero pricing, `grantsFreeAccess`) | Every consumer of `src/shared/utils/freeModels.ts`: model import, `auto/*` routing, `GET /v1/models`, and the browser previews |
 
 Counting can improve whenever a feed is available. Deciding stays on the
 release artifact, so the answer is identical in the browser and on the server,
@@ -68,7 +68,8 @@ purpose.
 
 ## Methodology & caveats
 
-- Numbers are **upper-bound estimates** from each provider's documented free-tier limits as of **2026-06-17**, gathered by web research (confidence tagged per row). Free tiers change constantly — re-verify before relying on a figure.
+- Numbers are **upper-bound estimates** from each provider's documented free-tier limits as of **2026-06-17**, gathered by web research. Free tiers change constantly — re-verify before relying on a figure.
+- **What an entry actually vouches for.** No entry carries a per-row confidence rating, and the API serves none — treat every figure above as an estimate of the same, unstated quality. Two facts are different, because they are curated by hand rather than inferred: 7 entries carry an independently documented hard stop, and 13 entries carry a prompt-training disclosure. `hardStopGuaranteed` is set only when the provider's own terms say that exceeding the free allowance refuses the request rather than silently starting to bill you, with the source in a comment next to the entry; it is never defaulted to `true`, and an entry nobody has verified stays unset. So a missing hard-stop flag means "not established", not "known to bill you".
 - `estMonthlyFreeTokens` = recurring monthly tokens only. **One-time signup credits do not recur** and count as 0. Discontinued tiers are also 0.
 - Daily token cap → `monthly = daily × 30`. Only RPD documented → `RPD × ~800 output tokens × 30`. Only RPM/TPM (no daily cap) → **uncapped** (see below).
 - **Permanently free, but no published token cap** (`siliconflow`, `glm-cn`, `tencent`, `baidu`, `kilo-gateway`, `opencode-zen`): these are real recurring free access, rate/concurrency-limited. We classify them `recurring-uncapped` and **never sum them** — multiplying `RPM × 24/7 × 30d` would produce a fantasy ceiling (the inflation we reject). They are listed so you know they exist.

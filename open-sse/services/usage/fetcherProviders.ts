@@ -59,6 +59,14 @@ export const USAGE_FETCHER_PROVIDERS = [
   // PromptQL playground credits (data.pro.ql.app getCreditSummary)
   "promptql",
   "pql",
+  // Adobe Firefly credit balance (GET firefly.adobe.io/v1/credits/balance).
+  // Dispatched since #8006; the registration list was missed at the time, so the
+  // manifest and the quota fetchers reported no usage support for either id.
+  // Declaring them here is what makes `registerGenericQuotaFetchers` wire a
+  // generic fetcher for them and `resolveFreeAccessState` stop returning early —
+  // i.e. the balance is now actually fetched, which is the point.
+  "adobe-firefly",
+  "firefly",
   // HyperAgent billing usage (creditBlocks USD)
   "hyperagent",
   "ha",

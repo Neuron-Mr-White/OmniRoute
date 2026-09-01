@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Удалить все завершенные пакеты",
     "batchListBatchesTable": "Пакеты",
     "changelogViewerLoading": "Загрузка журнала изменений с GitHub...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "Загрузка профиля...",
     "profileHowToEarn": "Как заработать",
     "bootstrapBannerDismiss": "Уволить",
@@ -1291,6 +1292,8 @@
     "discoverySubtitle": "Сканировать провайдеров на наличие бесплатного доступа",
     "conductor": "Кондуктор",
     "conductorSubtitle": "CLI-агент флот",
+    "orchestration": "Оркестрация",
+    "orchestrationSubtitle": "Живой обзор всего, что выполняется",
     "resilienceConnections": "Устойчивость Соединения",
     "resilienceConnectionsSubtitle": "Cooldown, автомат защиты, состояние блокировки",
     "settingsModalityBridge": "Мост Модальности",
@@ -1769,7 +1772,8 @@
     "tools": "Инструменты",
     "agentBridge": "Мост агентов",
     "trafficInspector": "Инспектор трафика",
-    "usage": "Использование"
+    "usage": "Использование",
+    "orchestration": "Оркестрация"
   },
   "home": {
     "quickStart": "Быстрый старт",
@@ -2936,8 +2940,7 @@
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Терминал Warp AI с поддержкой кастомных провайдеров",
       "agent-deck": "Мультиагентный оркестратор Agent Deck",
-      "5dive": "5dive — самостоятельно размещаемый флот агентов для кода; один auth-профиль направляет их всех в OmniRoute",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — самостоятельно размещаемый флот агентов для кода; один auth-профиль направляет их всех в OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -6445,7 +6448,12 @@
     "savedModelEndpointSettings": "Настройки конечной точки сохраненной модели",
     "searchByModelAria": "Поиск по модели",
     "selectSupportedEndpoint": "Выберите хотя бы одну поддерживаемую конечную точку",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Настройки",
@@ -7057,6 +7065,14 @@
     "providerAccountRoutingDesc": "Переопределить глобальную стратегию аккаунтов для этого провайдера (паритет с 9router).",
     "providerRoutingStrategy": "Стратегия аккаунтов",
     "providerRoutingInheritGlobal": "Наследовать глобальное значение по умолчанию",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Псевдонимы моделей",
     "modelAliasesTitle": "Псевдонимы моделей",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -8073,6 +8089,14 @@
     "resilienceProviderCooldownEnabledDesc": "Если включено, сбои провайдеров отслеживаются глобально, и они пропускаются на время кулдауна.",
     "resilienceProviderCooldownMin": "Минимальный кулдаун",
     "resilienceProviderCooldownMax": "Максимальный кулдаун",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Всегда включено для {provider} — требуется для безопасности OAuth-аккаунта; отключить нельзя.",
     "forcedFingerprintBadge": "Обязательно",
     "sessionAffinityTitle": "Привязка сессии",
@@ -8308,27 +8332,7 @@
     "cliproxyapiHealth": "Здоровье",
     "cliproxyapiPort": "Порт",
     "qdrantHost": "Хост",
-    "qdrantCollection": "Коллекция",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "Коллекция"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11294,6 +11298,11 @@
       "copy": "Копировать",
       "autoscrollOn": "Автопрокрутка: включена",
       "autoscrollOff": "Автопрокрутка: выключена",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "Сырой запрос клиента",
         "clientRequest": "Запрос клиента",
@@ -12527,6 +12536,8 @@
     "typeApikey": "API-ключ",
     "sortTypeFirst": "Сначала самые простые",
     "sortTypeFirstHelp": "Группировать по сложности регистрации (Без регистрации → Вход через OAuth → API-ключ), сохраняя порядок качества внутри каждой группы",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Без регистрации = без настройки · Вход через OAuth = вход со своим аккаунтом · API-ключ = использование своего ключа или бесплатного тарифа провайдера",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12955,6 +12966,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
+    }
+  },
   "comboControl": {
     "title": "Combo Control Center",
     "unavailable": "Combo Control Center unavailable",
@@ -13354,6 +13377,9 @@
     "colContext": "Контекст",
     "colCapabilities": "Возможности",
     "colTos": "Риск ToS",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "новый",
     "setupGuide": "Руководство по настройке",
     "disabledByFeed": "Отключено лентой Радар",
@@ -13901,6 +13927,41 @@
     "sttFailed": "Не удалось выполнить транскрипцию (проверьте модель/поставщика STT)",
     "ttsFailed": "Синтез речи не удался (проверьте модель/поставщика TTS)",
     "micDenied": "Микрофон недоступен или доступ запрещен"
+  },
+  "orchestration": {
+    "title": "Оркестрация",
+    "description": "Всё, что OmniRoute выполняет прямо сейчас — агенты, флот и маршрутизация",
+    "tabAgents": "Агенты",
+    "tabRouting": "Маршрутизация",
+    "tabOverview": "Обзор",
+    "showCompleted": "Показать завершённые",
+    "sourceCloudAgent": "Облачный агент",
+    "sourceA2A": "A2A",
+    "sourceConductor": "Кондуктор",
+    "sourceStale": "Устарело с {since}",
+    "sourceOffline": "Не в сети",
+    "stateQueued": "В очереди",
+    "stateRunning": "Выполняется",
+    "stateWaitingApproval": "Ожидает подтверждения",
+    "stateSucceeded": "Успешно",
+    "stateFailed": "Не удалось",
+    "stateCancelled": "Отменено",
+    "overflowMore": "+ещё {count}",
+    "emptyTitle": "Пока ничего не выполняется",
+    "emptyCloudAgentCta": "Настроить облачных агентов",
+    "emptyA2ACta": "Открыть A2A",
+    "emptyConductorCta": "Открыть Кондуктор",
+    "drawerObjective": "Цель",
+    "drawerTimeline": "Хронология",
+    "drawerMetrics": "Метрики",
+    "drawerResult": "Результат",
+    "drawerActions": "Действия",
+    "actionApprove": "Утвердить план",
+    "actionCancel": "Отмена",
+    "actionSeeInGraph": "Посмотреть на графе",
+    "actionDone": "Действие применено",
+    "actionFailed": "Действие не удалось: {error}",
+    "mirroredInA2A": "Отражено в A2A"
   },
   "cliproxyProviderExposure": {
     "title": "Экспозиция Провайдера",

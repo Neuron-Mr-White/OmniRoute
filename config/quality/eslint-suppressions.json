@@ -297,11 +297,6 @@
       "count": 1
     }
   },
-  "open-sse/handlers/videoGeneration/openai.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "open-sse/mcp-server/__tests__/a2aLifecycle.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 1
@@ -806,11 +801,6 @@
       "count": 1
     }
   },
-  "open-sse/utils/streamPayloadCollector.ts": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "open-sse/utils/usageTracking.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -824,14 +814,6 @@
   "src/app/(dashboard)/dashboard/a2a/page.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 6
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/acp-agents/page.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/app/(dashboard)/dashboard/analytics/CompressionAnalyticsTab.tsx": {
@@ -844,23 +826,8 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/batch/components/wizard/CostEstimateStep.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/batch/components/wizard/InputStep.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/batch/components/wizard/JsonlValidationStep.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/batch/files/page.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -899,21 +866,6 @@
       "count": 6
     }
   },
-  "src/app/(dashboard)/dashboard/conductor/ConductorPageClient.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/conductor/FaroChat.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/conversations/page.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
   "src/app/(dashboard)/dashboard/costs/CostOverviewTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -934,31 +886,8 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/discovery/DiscoveryPageClient.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/free-provider-rankings/page.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/health/ProviderHealthAutopilotCard.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/health/ProviderHealthMatrixCard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/health/TelemetryCard.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -967,16 +896,8 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/log-export/LogExportPageClient.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/mcp/page.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 2
-    },
-    "react-hooks/set-state-in-effect": {
       "count": 2
     }
   },
@@ -985,23 +906,8 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/playground/components/tabs/ApiTab.tsx": {
-    "react-hooks/exhaustive-deps": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/playground/components/tabs/CompareTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/plugins/[name]/config/page.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/plugins/page.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1080,11 +986,6 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/relay/RelayProxyClient.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/resilience/connections/components/ConnectionDetail.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -1092,19 +993,6 @@
   },
   "src/app/(dashboard)/dashboard/resilience/connections/components/ConnectionsTable.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/resilience/connections/components/ResilienceConnectionsClient.tsx": {
-    "react-hooks/purity": {
-      "count": 1
-    },
-    "react-hooks/refs": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/runtime/components/ModelCooldownsCard.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1153,11 +1041,6 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/settings/components/ModelAliasesTab.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/settings/components/ModelCapabilityOverridesTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -1183,17 +1066,7 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/settings/components/SessionInfoCard.tsx": {
-    "react-hooks/exhaustive-deps": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/settings/components/SystemStorageTab.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/useProxyPoolModal.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
     }
@@ -1203,21 +1076,6 @@
       "count": 3
     }
   },
-  "src/app/(dashboard)/dashboard/tools/agent-bridge/components/ModelSelectorModal.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/tools/agent-bridge/components/SetupWizard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/tools/traffic-inspector/components/CustomHostsManager.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/tools/traffic-inspector/components/RequestStreamingList.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -1225,11 +1083,6 @@
   },
   "src/app/(dashboard)/dashboard/tools/traffic-inspector/components/TopBarControls.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/translator/components/MonitorTab.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1246,11 +1099,6 @@
   "src/app/(dashboard)/dashboard/translator/components/TranslateTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/usage/components/ProviderLimits/ProviderLimitCard.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 3
     }
   },
   "src/app/(dashboard)/dashboard/usage/components/ProviderLimits/index.tsx": {
@@ -1273,23 +1121,8 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/webhooks/WebhooksPageClient.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/webhooks/__tests__/webhook-wizard.test.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/webhooks/components/AddWebhookWizard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/webhooks/components/WebhookDeliveriesPanel.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1551,24 +1384,9 @@
       "count": 1
     }
   },
-  "src/app/docs/components/FeedbackWidget.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/global-error.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/login/page.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
-    }
-  },
-  "src/app/status/page.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/domain/assessment/assessor.ts": {
@@ -1599,9 +1417,6 @@
   "src/hooks/useLiveDashboard.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "react-hooks/exhaustive-deps": {
-      "count": 2
     }
   },
   "src/lib/a2a/skills/healthReport.ts": {
@@ -1672,11 +1487,6 @@
   "src/lib/copilot/tools.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
-    }
-  },
-  "src/lib/credentialHealth/scheduler.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
     }
   },
   "src/lib/db/apiKeys.ts": {
@@ -2130,11 +1940,6 @@
       "count": 3
     }
   },
-  "src/shared/components/PricingModal.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "src/shared/components/ProxyLogDetail.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -2168,26 +1973,6 @@
       "count": 1
     }
   },
-  "src/shared/components/docs/CodeBlock.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/shared/components/docs/DocsBreadcrumbs.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/shared/components/docs/DocsSidebar.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/shared/components/docs/DocsThemeProvider.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 3
-    }
-  },
   "src/shared/constants/agentSkills.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -2200,11 +1985,6 @@
   },
   "src/shared/contracts/quota.ts": {
     "no-restricted-syntax": {
-      "count": 1
-    }
-  },
-  "src/shared/hooks/cli/useToolBatchStatuses.ts": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -3290,9 +3070,6 @@
   "tests/unit/cli-nodes-commands.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 15
-    },
-    "@typescript-eslint/no-unused-vars": {
-      "count": 2
     }
   },
   "tests/unit/cli-oauth-commands.test.ts": {
@@ -5276,11 +5053,6 @@
       "count": 1
     }
   },
-  "tests/unit/stream-payload-collector.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
   "tests/unit/stream-prompt-tokens-zero-upstream.test.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -5423,11 +5195,6 @@
   "tests/unit/transform-stream-hwm.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 5
-    }
-  },
-  "tests/unit/translator-antigravity-to-openai.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
     }
   },
   "tests/unit/translator-claude-helper-thinking.test.ts": {

@@ -73,7 +73,7 @@ npm run dev
 npm run build    # next build → .build/next/ then assembleStandalone → dist/
 npm run start
 
-# Fast backend/API-only build for contributor changes
+# Fast backend/API-only compile for contributor changes
 npm run build:contributor
 
 # Release build (clean rebuild + HEAD sentinel — required for deploy)
@@ -82,6 +82,10 @@ npm run build:release   # rm -rf .build dist && build + writes dist/BUILD_SHA
 # Common port configuration
 PORT=20128 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run dev
 ```
+
+The contributor build performs compile-only validation: it does not assemble the standalone
+distribution or build optional native packaging assets. Use the regular production build when
+you need to validate the shippable bundle.
 
 ### Build Output Layout
 

@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Verwijder alle voltooide batches",
     "batchListBatchesTable": "Batches",
     "changelogViewerLoading": "Wijzigingslogboek laden vanuit GitHub...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "Profiel laden...",
     "profileHowToEarn": "Hoe te verdienen",
     "bootstrapBannerDismiss": "Negeren",
@@ -1291,6 +1292,8 @@
     "discoverySubtitle": "Providers scannen op gratis toegang",
     "conductor": "Conductor",
     "conductorSubtitle": "CLI-agent vloot",
+    "orchestration": "Orkestratie",
+    "orchestrationSubtitle": "Live overzicht van alles wat actief is",
     "resilienceConnections": "Verbindingsveerkracht",
     "resilienceConnectionsSubtitle": "Cooldown, breaker, lockout-status",
     "settingsModalityBridge": "Modality Brug",
@@ -1769,7 +1772,8 @@
     "tools": "Tools",
     "agentBridge": "Agent Bridge",
     "trafficInspector": "Verkeersinspectie",
-    "usage": "Gebruik"
+    "usage": "Gebruik",
+    "orchestration": "Orkestratie"
   },
   "home": {
     "quickStart": "Snel beginnen",
@@ -2936,8 +2940,7 @@
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Warp AI-terminal met ondersteuning voor aangepaste providers",
       "agent-deck": "Agent Deck multi-agent-orchestrator",
-      "5dive": "5dive — zelf gehoste vloot van codeeragents; één auth-profiel wijst ze allemaal naar OmniRoute",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — zelf gehoste vloot van codeeragents; één auth-profiel wijst ze allemaal naar OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -6445,7 +6448,12 @@
     "savedModelEndpointSettings": "Instellingen voor opgeslagen model-eindpunt",
     "searchByModelAria": "Zoeken op model",
     "selectSupportedEndpoint": "Selecteer ten minste één ondersteunde eindpunt",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "Instellingen",
@@ -7057,6 +7065,14 @@
     "providerAccountRoutingDesc": "Globale accountstrategie overschrijven voor deze provider (9router-pariteit).",
     "providerRoutingStrategy": "Accountstrategie",
     "providerRoutingInheritGlobal": "Globale standaard overnemen",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Modelaliassen",
     "modelAliasesTitle": "Model Aliases",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -8073,6 +8089,14 @@
     "resilienceProviderCooldownEnabledDesc": "Indien ingeschakeld, worden mislukte providers globaal bijgehouden en overgeslagen gedurende een afkoelperiode.",
     "resilienceProviderCooldownMin": "Minimale afkoelperiode",
     "resilienceProviderCooldownMax": "Maximale afkoelperiode",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Always enabled for {provider} — required for OAuth account safety; cannot be turned off.",
     "forcedFingerprintBadge": "Required",
     "sessionAffinityTitle": "Sessie-affiniteit",
@@ -8308,27 +8332,7 @@
     "cliproxyapiHealth": "Gezondheid",
     "cliproxyapiPort": "Haven",
     "qdrantHost": "Host",
-    "qdrantCollection": "Verzameling",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "Verzameling"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11294,6 +11298,11 @@
       "copy": "Kopieer",
       "autoscrollOn": "Autoscroll: aan",
       "autoscrollOff": "Autoscroll: uit",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "Client Rauwe Verzoek",
         "clientRequest": "Klantverzoek",
@@ -12527,6 +12536,8 @@
     "typeApikey": "API-sleutel",
     "sortTypeFirst": "Makkelijkste eerst",
     "sortTypeFirstHelp": "Groeperen op registratie-inspanning (Geen registratie → OAuth-inloggen → API-sleutel), met behoud van kwaliteitsvolgorde binnen elke groep",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "Geen registratie = geen configuratie · OAuth-inloggen = inloggen met uw eigen account · API-sleutel = gebruik uw eigen sleutel of het gratis abonnement van die provider",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12955,6 +12966,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
+    }
+  },
   "comboControl": {
     "title": "Combo-controlecentrum",
     "unavailable": "Combo-controlecentrum niet beschikbaar",
@@ -13354,6 +13377,9 @@
     "colContext": "Context",
     "colCapabilities": "Capaciteiten",
     "colTos": "ToS Risico",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "nieuw",
     "setupGuide": "Installatiehandleiding",
     "disabledByFeed": "Uitgeschakeld door Radar-feed",
@@ -13901,6 +13927,41 @@
     "sttFailed": "Transcriptie mislukt (controleer het STT-model/provider)",
     "ttsFailed": "Spraaksynthetisatie mislukt (controleer het TTS-model/provider)",
     "micDenied": "Microfoon niet beschikbaar of toestemming geweigerd"
+  },
+  "orchestration": {
+    "title": "Orkestratie",
+    "description": "Alles wat OmniRoute op dit moment uitvoert — agents, vloot en routering",
+    "tabAgents": "Agents",
+    "tabRouting": "Routering",
+    "tabOverview": "Overzicht",
+    "showCompleted": "Voltooide items tonen",
+    "sourceCloudAgent": "Cloud Agent",
+    "sourceA2A": "A2A",
+    "sourceConductor": "Conductor",
+    "sourceStale": "Verouderd sinds {since}",
+    "sourceOffline": "Offline",
+    "stateQueued": "In wachtrij",
+    "stateRunning": "Actief",
+    "stateWaitingApproval": "Wacht op goedkeuring",
+    "stateSucceeded": "Geslaagd",
+    "stateFailed": "Mislukt",
+    "stateCancelled": "Geannuleerd",
+    "overflowMore": "+{count} meer",
+    "emptyTitle": "Nog niets actief",
+    "emptyCloudAgentCta": "Cloud Agents instellen",
+    "emptyA2ACta": "A2A openen",
+    "emptyConductorCta": "Conductor openen",
+    "drawerObjective": "Doel",
+    "drawerTimeline": "Tijdlijn",
+    "drawerMetrics": "Statistieken",
+    "drawerResult": "Resultaat",
+    "drawerActions": "Acties",
+    "actionApprove": "Plan goedkeuren",
+    "actionCancel": "Annuleren",
+    "actionSeeInGraph": "Bekijk in grafiek",
+    "actionDone": "Actie toegepast",
+    "actionFailed": "Actie mislukt: {error}",
+    "mirroredInA2A": "Weergegeven in A2A"
   },
   "cliproxyProviderExposure": {
     "title": "Provider Blootstelling",

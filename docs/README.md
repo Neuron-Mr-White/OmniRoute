@@ -30,6 +30,7 @@ Simple guides for using OmniRoute — no technical background needed.
 - [USER_GUIDE.md](guides/USER_GUIDE.md) — daily usage of the dashboard and API.
 - [THINKING_BUDGET.md](guides/THINKING_BUDGET.md) — thinking/reasoning budget modes (passthrough vs auto-strip).
 - [FEATURES.md](guides/FEATURES.md) — dashboard feature gallery.
+- [CHAOS-MODE.md](guides/CHAOS-MODE.md) — multi-model parallel/collaborative execution (setup, permissions, API).
 - [TIERS.md](guides/TIERS.md) — OmniRoute tiers explained (user guide).
 - [USAGE_QUOTA_GUIDE.md](guides/USAGE_QUOTA_GUIDE.md) — usage, quota & spend tracking.
 - [COST_TRACKING.md](guides/COST_TRACKING.md) — cost and spend tracking.

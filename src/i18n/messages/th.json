@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "ลบแบทช์ที่เสร็จสมบูรณ์ทั้งหมด",
     "batchListBatchesTable": "แบตช์",
     "changelogViewerLoading": "กำลังโหลดบันทึกการเปลี่ยนแปลงจาก GitHub...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "กำลังโหลดโปรไฟล์...",
     "profileHowToEarn": "วิธีการได้รับ",
     "bootstrapBannerDismiss": "ยกเลิก",
@@ -1291,6 +1292,8 @@
     "discoverySubtitle": "สแกนผู้ให้บริการเพื่อเข้าใช้งานฟรี",
     "conductor": "ตัวนำ",
     "conductorSubtitle": "ฝูงเรือ CLI-agent",
+    "orchestration": "ออร์เคสเตรชัน",
+    "orchestrationSubtitle": "มุมมองสดของทุกสิ่งที่กำลังทำงาน",
     "resilienceConnections": "ความยืดหยุ่นของการเชื่อมต่อ",
     "resilienceConnectionsSubtitle": "คูลดาวน์ เบรกเกอร์ สถานะการล็อกเอาต์",
     "settingsModalityBridge": "สะพานโมดัลิตี้",
@@ -1769,7 +1772,8 @@
     "tools": "เครื่องมือ",
     "agentBridge": "Agent Bridge",
     "trafficInspector": "ตัวตรวจสอบทราฟฟิก",
-    "usage": "การใช้งาน"
+    "usage": "การใช้งาน",
+    "orchestration": "ออร์เคสเตรชัน"
   },
   "home": {
     "quickStart": "เริ่มต้นอย่างรวดเร็ว",
@@ -2936,8 +2940,7 @@
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "เทอร์มินัล Warp AI ที่รองรับผู้ให้บริการแบบกำหนดเอง",
       "agent-deck": "ตัวประสานงานหลายเอเจนต์ Agent Deck",
-      "5dive": "5dive — ฟลีตเอเจนต์เขียนโค้ดที่โฮสต์เอง; โปรไฟล์ auth เดียวชี้ทั้งหมดไปที่ OmniRoute",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — ฟลีตเอเจนต์เขียนโค้ดที่โฮสต์เอง; โปรไฟล์ auth เดียวชี้ทั้งหมดไปที่ OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -6445,7 +6448,12 @@
     "savedModelEndpointSettings": "การตั้งค่า endpoint ของโมเดลที่บันทึกไว้",
     "searchByModelAria": "ค้นหาตามรุ่น",
     "selectSupportedEndpoint": "เลือกจุดสิ้นสุดที่รองรับอย่างน้อยหนึ่งจุด",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "clearConnectionCooldown": "Clear cooldown",
+    "clearConnectionCooldownInProgress": "Clearing…",
+    "clearConnectionCooldownTitle": "Clear the cooldown now — use when the quota has already refreshed upstream",
+    "connectionCooldownCleared": "Cooldown cleared — connection rejoined routing",
+    "failedClearConnectionCooldown": "Failed to clear cooldown"
   },
   "settings": {
     "title": "การตั้งค่า",
@@ -7057,6 +7065,14 @@
     "providerAccountRoutingDesc": "เขียนทับกลยุทธ์บัญชีส่วนกลางสำหรับผู้ให้บริการรายนี้ (เทียบเท่า 9router)",
     "providerRoutingStrategy": "กลยุทธ์บัญชี",
     "providerRoutingInheritGlobal": "สืบทอดค่าเริ่มต้นส่วนกลาง",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "นามแฝงของโมเดล",
     "modelAliasesTitle": "นามแฝงโมเดล",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -8073,6 +8089,14 @@
     "resilienceProviderCooldownEnabledDesc": "เมื่อเปิดใช้งาน ผู้ให้บริการที่ล้มเหลวจะถูกติดตามทั่วทั้งระบบและถูกข้ามเป็นระยะเวลาคูลดาวน์",
     "resilienceProviderCooldownMin": "คูลดาวน์ขั้นต่ำ",
     "resilienceProviderCooldownMax": "คูลดาวน์สูงสุด",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Always enabled for {provider} — required for OAuth account safety; cannot be turned off.",
     "forcedFingerprintBadge": "Required",
     "sessionAffinityTitle": "Session affinity",
@@ -8308,27 +8332,7 @@
     "cliproxyapiHealth": "สุขภาพ",
     "cliproxyapiPort": "พอร์ต",
     "qdrantHost": "โฮสต์",
-    "qdrantCollection": "การรวบรวม",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "การรวบรวม"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11294,6 +11298,11 @@
       "copy": "คัดลอก",
       "autoscrollOn": "เลื่อนอัตโนมัติ: เปิดใช้งาน",
       "autoscrollOff": "เลื่อนอัตโนมัติ: ปิด",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "คำขอดิบของลูกค้า",
         "clientRequest": "คำขอของลูกค้า",
@@ -12527,6 +12536,8 @@
     "typeApikey": "คีย์ API",
     "sortTypeFirst": "ง่ายที่สุดก่อน",
     "sortTypeFirstHelp": "จัดกลุ่มตามความยากง่ายในการลงทะเบียน (ไม่ต้องลงทะเบียน → เข้าสู่ระบบด้วย OAuth → คีย์ API) โดยยังคงเรียงลำดับตามคุณภาพภายในแต่ละกลุ่ม",
+    "sortByReliability": "__MISSING__:Most reliable first",
+    "sortByReliabilityHelp": "__MISSING__:Order providers by the share of calls that succeeded in the selected window. Providers with too few calls to state a rate keep their score order, below the measured ones.",
     "typeLegend": "ไม่ต้องลงทะเบียน = ไม่ต้องตั้งค่า · เข้าสู่ระบบด้วย OAuth = ลงชื่อเข้าใช้ด้วยบัญชีของคุณเอง · คีย์ API = ใช้คีย์ของคุณเองหรือระดับใช้งานฟรีของผู้ให้บริการนั้น",
     "colReliability": "__MISSING__:Reliability",
     "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
@@ -12955,6 +12966,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
+    }
+  },
   "comboControl": {
     "title": "ศูนย์ควบคุม Combo",
     "unavailable": "ศูนย์ควบคุมคอมโบไม่พร้อมใช้งาน",
@@ -13354,6 +13377,9 @@
     "colContext": "บริบท",
     "colCapabilities": "ความสามารถ",
     "colTos": "ความเสี่ยงของ ToS",
+    "colLimits": "__MISSING__:Rate limits",
+    "trainsOnPrompts": "__MISSING__:Trains on prompts",
+    "trainsOnPromptsHelp": "__MISSING__:This provider's terms state it may train on the prompts you send. Models without this badge either state they do not, or do not document it — an absent statement is not a guarantee.",
     "newBadge": "ใหม่",
     "setupGuide": "คู่มือการตั้งค่า",
     "disabledByFeed": "ถูกปิดใช้งานโดยฟีดเรดาร์",
@@ -13901,6 +13927,41 @@
     "sttFailed": "การถอดเสียงล้มเหลว (ตรวจสอบโมเดล/ผู้ให้บริการ STT)",
     "ttsFailed": "การสังเคราะห์เสียงล้มเหลว (โปรดตรวจสอบโมเดล/ผู้ให้บริการ TTS)",
     "micDenied": "ไมโครโฟนไม่พร้อมใช้งานหรือถูกปฏิเสธสิทธิ์"
+  },
+  "orchestration": {
+    "title": "ออร์เคสเตรชัน",
+    "description": "ทุกสิ่งที่ OmniRoute กำลังทำงานอยู่ในขณะนี้ — เอเจนต์ ฝูงบิน และการกำหนดเส้นทาง",
+    "tabAgents": "เอเจนต์",
+    "tabRouting": "การกำหนดเส้นทาง",
+    "tabOverview": "ภาพรวม",
+    "showCompleted": "แสดงที่เสร็จสิ้นแล้ว",
+    "sourceCloudAgent": "เอเจนต์คลาวด์",
+    "sourceA2A": "A2A",
+    "sourceConductor": "ตัวนำ",
+    "sourceStale": "ไม่มีการอัปเดตตั้งแต่ {since}",
+    "sourceOffline": "ออฟไลน์",
+    "stateQueued": "อยู่ในคิว",
+    "stateRunning": "กำลังทำงาน",
+    "stateWaitingApproval": "รอการอนุมัติ",
+    "stateSucceeded": "สำเร็จ",
+    "stateFailed": "ล้มเหลว",
+    "stateCancelled": "ยกเลิกแล้ว",
+    "overflowMore": "อีก {count} รายการ",
+    "emptyTitle": "ยังไม่มีอะไรทำงานอยู่",
+    "emptyCloudAgentCta": "ตั้งค่าเอเจนต์คลาวด์",
+    "emptyA2ACta": "เปิด A2A",
+    "emptyConductorCta": "เปิดตัวนำ",
+    "drawerObjective": "วัตถุประสงค์",
+    "drawerTimeline": "ไทม์ไลน์",
+    "drawerMetrics": "เมตริก",
+    "drawerResult": "ผลลัพธ์",
+    "drawerActions": "การดำเนินการ",
+    "actionApprove": "อนุมัติแผน",
+    "actionCancel": "ยกเลิก",
+    "actionSeeInGraph": "ดูในกราฟ",
+    "actionDone": "ดำเนินการเรียบร้อยแล้ว",
+    "actionFailed": "การดำเนินการล้มเหลว: {error}",
+    "mirroredInA2A": "สะท้อนใน A2A"
   },
   "cliproxyProviderExposure": {
     "title": "การเปิดเผยผู้ให้บริการ",
