@@ -278,21 +278,6 @@ test("GLM quota rows are ordered by session, weekly, then monthly", () => {
   );
 });
 
-test("GLM quota rows are ordered by session, weekly, then monthly", () => {
-  const parsed = providerLimitUtils.parseQuotaData("glm", {
-    quotas: {
-      mcp_monthly: { used: 10, total: 100, remainingPercentage: 90 },
-      weekly: { used: 20, total: 100, remainingPercentage: 80 },
-      session: { used: 30, total: 100, remainingPercentage: 70 },
-    },
-  });
-
-  assert.deepEqual(
-    parsed.map((quota) => quota.name),
-    ["session", "weekly", "mcp_monthly"]
-  );
-});
-
 test("OpenRouter credits render as a USD credit count, not a percentage row", () => {
   const parsed = providerLimitUtils.parseQuotaData("openrouter", {
     quotas: {
