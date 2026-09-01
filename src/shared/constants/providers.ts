@@ -75,7 +75,6 @@ export function getProviderConnectionFamilyIds(providerId: unknown): readonly st
 
 // Web / Cookie Providers
 
-
 // API Key Providers
 
 // Sub-categories within APIKEY_PROVIDERS (used by dashboard and catalog views).
@@ -145,7 +144,6 @@ export const AGGREGATOR_PROVIDER_IDS = new Set([
   "helixmind",
   "tabitoken",
   "logfare",
-
 ]);
 
 export const ENTERPRISE_CLOUD_PROVIDER_IDS = new Set([
@@ -541,6 +539,10 @@ export const USAGE_SUPPORTED_PROVIDERS = [
   "agentrouter",
   // Kilo Code personal USD balance (GET /api/profile/balance, existing OAuth token)
   "kilocode",
+  // OpenRouter key limits + account credits (GET /api/v1/key + /api/v1/credits)
+  "openrouter",
+  // Devin CLI agentic quota (Codeium seat-management GetUserStatus, protobuf)
+  "devin-cli",
 ];
 
 // ── Zod validation, lazily on first AI_PROVIDERS access (perf: skips the walk
