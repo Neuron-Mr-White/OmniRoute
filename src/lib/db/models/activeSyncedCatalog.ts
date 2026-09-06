@@ -122,7 +122,7 @@ export async function getActiveSyncedCatalog(providerId: string): Promise<Active
   }
 
   try {
-    const [connections, modelsByConnection] = await Promise.all([
+    const [connections, ownModelsByConnection] = await Promise.all([
       getRawProviderConnections(
         { provider: storedProviderId, isActive: true },
         undefined,
@@ -131,6 +131,7 @@ export async function getActiveSyncedCatalog(providerId: string): Promise<Active
       ),
       getSyncedAvailableModelsByConnection(storedProviderId),
     ]);
+    let modelsByConnection = ownModelsByConnection;
 
     let activeConnectionIds = connections
       .map(readConnectionRef)
@@ -142,17 +143,22 @@ export async function getActiveSyncedCatalog(providerId: string): Promise<Active
     // catalog (`devin models list`) under the sibling devin-cli connection
     // that ran the discovery. Validate those rows against the sibling's
     // active connections so the agentic lane's catalog surfaces.
-    if (activeConnectionIds.length === 0 && storedProviderId === "devin-cli-agentic") {
-      const siblingConnections = await getRawProviderConnections(
-        { provider: "devin-cli", isActive: true },
-        undefined,
-        undefined,
-        ["id", "provider"]
-      );
+    if (
+      storedProviderId === "devin-cli-agentic" &&
+      collectModelsForConnections(modelsByConnection, activeConnectionIds).length === 0
+    ) {
+      const [siblingConnections, siblingModels] = await Promise.all([
+        getRawProviderConnections({ provider: "devin-cli", isActive: true }, undefined, undefined, [
+          "id",
+          "provider",
+        ]),
+        getSyncedAvailableModelsByConnection("devin-cli"),
+      ]);
       activeConnectionIds = siblingConnections
         .map(readConnectionRef)
         .filter((connection): connection is ProviderConnectionRef => connection !== null)
         .map((connection) => connection.id);
+      modelsByConnection = siblingModels;
     }
 
     const models = enrichCursorCatalog(
@@ -237,8 +243,8 @@ export async function getAllActiveSyncedModels(): Promise<Record<string, SyncedA
     if (!result["devin-cli-agentic"]) {
       const cliConnIds = connectionIdsByProvider.get("devin-cli");
       if (cliConnIds && cliConnIds.size > 0) {
-        const agenticByConnection = await getSyncedAvailableModelsByConnection("devin-cli-agentic");
-        const agenticModels = collectModelsForConnections(agenticByConnection, cliConnIds);
+        const cliByConnection = await getSyncedAvailableModelsByConnection("devin-cli");
+        const agenticModels = collectModelsForConnections(cliByConnection, cliConnIds);
         if (agenticModels.length > 0) {
           result["devin-cli-agentic"] = agenticModels;
         }

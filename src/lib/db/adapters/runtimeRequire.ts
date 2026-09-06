@@ -5,34 +5,56 @@
  * The standalone server is emitted as CommonJS chunks and externalizes the
  * native database packages. Keep those requests as static `require()` calls so
  * webpack preserves the external boundary. Development and tests run as ESM,
- * where `require` is unavailable; the fallback anchors resolution to the real
- * process entrypoint so Turbopack cannot replace it with an in-bundle resolver.
+ * where `require` is unavailable; the `createRequire(import.meta.url)` fallback
+ * handles those callers.
+ *
+ * Bundler CJS shims (Turbopack chunk runtime) can reject aliased require
+ * expressions with "Cannot find module ... expression is too dynamic" even
+ * though the package is present in the runtime's node_modules — which silently
+ * degraded every DB handle opened from a route chunk to the sql.js WASM
+ * in-memory adapter (writes never reached disk; model syncs "succeeded" in
+ * memory only). The fallback anchors a createRequire at the runtime root
+ * (cwd carries the traced package.json + node_modules) so the native
+ * better-sqlite3 driver always loads in standalone deployments.
  */
 import * as nodeModule from "node:module";
+import * as nodePath from "node:path";
 
-const esmRequire = nodeModule.createRequire(process.argv[1] || process.cwd());
+function requireFromRuntimeRoot(specifier: string): unknown {
+  try {
+    const rootRequire = nodeModule.createRequire(nodePath.join(process.cwd(), "package.json"));
+    return rootRequire(specifier);
+  } catch {
+    return nodeModule.createRequire(import.meta.url)(specifier);
+  }
+}
 
 function esmRuntimeRequire(specifier: string): unknown {
-  // Reflect keeps the optional request dynamic. A direct call is rewritten by
-  // Turbopack and fails at runtime as "Cannot find module as expression is too dynamic".
-  return Reflect.apply(esmRequire, undefined, [specifier]);
+  return requireFromRuntimeRoot(specifier);
 }
 
 export function runtimeRequire(specifier: string): unknown {
   const isCjs = typeof module !== "undefined" && typeof module.require === "function";
   if (isCjs) {
     const req = module.require;
-    switch (specifier) {
-      case "better-sqlite3":
-        return req("better-sqlite3");
-      case "node:sqlite":
-        return req("node:sqlite");
-      case "bun:sqlite":
-        return req("bun:sqlite");
-      case "sql.js":
-        return req("sql.js");
-      case "sqlite-vec":
-        return req("sqlite-vec");
+    try {
+      switch (specifier) {
+        case "better-sqlite3":
+          return req("better-sqlite3");
+        case "node:sqlite":
+          return req("node:sqlite");
+        case "bun:sqlite":
+          return req("bun:sqlite");
+        case "sql.js":
+          return req("sql.js");
+        case "sqlite-vec":
+          return req("sqlite-vec");
+      }
+      throw new Error(`Unsupported SQLite driver module: ${specifier}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!/too dynamic|Cannot find module/.test(message)) throw err;
+      return requireFromRuntimeRoot(specifier);
     }
   }
 
