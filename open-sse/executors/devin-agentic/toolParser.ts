@@ -66,6 +66,57 @@ function validateSchema(value: unknown, schema: JsonRecord, path: string): strin
   return errors;
 }
 
+/**
+ * Best-effort JSON recovery for the content of a <tool> envelope:
+ *  1. strip markdown code fences (```json ... ``` / ``` ... ```)
+ *  2. extract the first balanced brace-delimited object
+ *  3. remove trailing commas before `}` / `]`
+ * Returns the parsed record, or null when nothing parseable remains.
+ */
+function recoverEnvelopeJson(raw: string): JsonRecord | null {
+  let candidate = raw.trim();
+
+  const fence = candidate.match(/^```[a-zA-Z0-9_-]*\s*([\s\S]*?)\s*```$/);
+  if (fence) candidate = fence[1].trim();
+  candidate = candidate.replace(/^[`\s]+|[`\s]+$/g, "");
+
+  const start = candidate.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let end = -1;
+  for (let i = start; i < candidate.length; i++) {
+    const ch = candidate[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') inString = !inString;
+    if (inString) continue;
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end === -1) return null;
+
+  const extracted = candidate.slice(start, end + 1).replace(/,\s*([}\]])/g, "$1");
+  try {
+    return asRecord(JSON.parse(extracted));
+  } catch {
+    return null;
+  }
+}
+
 export function parseDevinToolRequest(text: string, tools: AnthropicTool[], idSeed = "") {
   const matches = [...text.matchAll(/<tool>\s*([\s\S]*?)\s*<\/tool>/g)];
   if (matches.length === 0) return null;
@@ -86,8 +137,22 @@ export function parseDevinToolRequest(text: string, tools: AnthropicTool[], idSe
   let payload: JsonRecord;
   try {
     payload = asRecord(JSON.parse(matches[0][1] || "{}"));
-  } catch {
-    throw new DevinAgenticBridgeError("Devin tool request was not valid JSON", "invalid_tool_json");
+  } catch (error) {
+    // Tolerant recovery for common frontier-model envelope malformations:
+    // markdown fences around the JSON (```json ... ```), trailing commas, and
+    // stray prose around a balanced object. Without this, one malformed
+    // envelope + one equally malformed repair attempt hard-fails the whole
+    // turn with invalid_tool_json (live repro: dva/gpt-6-astra-low).
+    const recovered = recoverEnvelopeJson(matches[0][1] || "");
+    if (recovered === null) {
+      throw new DevinAgenticBridgeError(
+        `Devin tool request was not valid JSON: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        "invalid_tool_json"
+      );
+    }
+    payload = recovered;
   }
 
   const name = typeof payload.name === "string" ? payload.name.trim() : "";
