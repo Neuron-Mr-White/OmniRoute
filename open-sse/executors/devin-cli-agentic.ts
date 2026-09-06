@@ -120,7 +120,7 @@ function isIsolatedHome(value: string): boolean {
 }
 
 export function buildDevinChildEnv(
-  _credentials: ExecuteInput["credentials"],
+  credentials: ExecuteInput["credentials"],
   source: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
   const home = source.DEVIN_AGENTIC_HOME?.trim() || "";
@@ -153,6 +153,18 @@ export function buildDevinChildEnv(
     env.HTTP_PROXY = TRUSTED_DEVIN_BRIDGE_PROXY_URL;
     env.HTTPS_PROXY = TRUSTED_DEVIN_BRIDGE_PROXY_URL;
   }
+
+  // Devin subscription credentials: the merged devin-cli provider authenticates
+  // via the operator's oauth connection; the token reaches the CLI the same way
+  // the legacy text-only executor passed it (WINDSURF_API_KEY). When absent the
+  // CLI falls back to its own `devin auth login` state inside the sandbox HOME.
+  const subscriptionToken =
+    typeof credentials?.accessToken === "string" && credentials.accessToken.trim()
+      ? credentials.accessToken.trim()
+      : typeof credentials?.apiKey === "string" && credentials.apiKey.trim()
+        ? credentials.apiKey.trim()
+        : "";
+  if (subscriptionToken) env.WINDSURF_API_KEY = subscriptionToken;
 
   for (const key of CLAUDE_ENV_BLOCKLIST) delete env[key];
   return env;
@@ -436,14 +448,8 @@ function isKnownStaticDevinModel(model: string): boolean {
 async function loadSyncedDevinModelIds(): Promise<Set<string>> {
   try {
     const { getSyncedAvailableModels } = await import("@/lib/db/models");
-    // Union both Devin CLI lanes (dv=devin-cli, dva=devin-cli-agentic): they
-    // share one account and one live catalog, and the dashboard sync may have
-    // run from either provider's page.
-    const [agentic, cli] = await Promise.all([
-      getSyncedAvailableModels("devin-cli-agentic"),
-      getSyncedAvailableModels("devin-cli"),
-    ]);
-    return new Set([...agentic, ...cli].map((entry) => String(entry.id)));
+    const models = await getSyncedAvailableModels("devin-cli");
+    return new Set(models.map((entry) => String(entry.id)));
   } catch {
     return new Set();
   }

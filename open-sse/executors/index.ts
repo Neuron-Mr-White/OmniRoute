@@ -96,12 +96,13 @@ const lazyExecutors: Record<string, () => Promise<BaseExecutor>> = {
   "ms-web": () => import("./muse-spark-web.ts").then((m) => new m.MuseSparkWebExecutor()), // Alias
   "devin-desktop": () => import("./devin-desktop.ts").then((m) => new m.DevinDesktopExecutor()),
   "zed-hosted": () => import("./zed-hosted.ts").then((m) => new m.ZedHostedExecutor()),
-  "devin-cli": () => import("./devin-cli.ts").then((m) => new m.DevinCliExecutor()),
+  // devin-cli is the single Devin CLI provider: the agentic bridge executor
+  // (the legacy text-only openai executor was removed with the merge).
+  "devin-cli": () => import("./devin-cli-agentic.ts").then((m) => new m.DevinCliAgenticExecutor()),
   zcode: () => import("./zcode.ts").then((m) => new m.ZcodeExecutor()),
   zc: () => import("./zcode.ts").then((m) => new m.ZcodeExecutor()), // Alias
   "devin-cli-agentic": () =>
     import("./devin-cli-agentic.ts").then((m) => new m.DevinCliAgenticExecutor()),
-  devin: () => import("./devin-cli.ts").then((m) => new m.DevinCliExecutor()), // Alias
   "deepseek-web": () =>
     import("./deepseek-web-with-auto-refresh.ts").then(
       (m) => new m.DeepSeekWebWithAutoRefreshExecutor()

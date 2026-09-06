@@ -91,9 +91,10 @@ describe("devinModelDiscovery — parseDevinModelsJson", () => {
 
 describe("devinModelDiscovery — providerSupportsDevinDiscovery", () => {
   it("matches the devin CLI providers case-insensitively", () => {
-    assert.equal(providerSupportsDevinDiscovery("devin-cli-agentic"), true);
+    assert.equal(providerSupportsDevinDiscovery("devin-cli"), true);
     assert.equal(providerSupportsDevinDiscovery("DEVIN-CLI"), true);
-    assert.equal(providerSupportsDevinDiscovery("devin-cli-agentic "), true);
+    assert.equal(providerSupportsDevinDiscovery("devin-cli "), true);
+    assert.equal(providerSupportsDevinDiscovery("devin-cli-agentic"), false);
     assert.equal(providerSupportsDevinDiscovery("devin-desktop"), false);
     assert.equal(providerSupportsDevinDiscovery("claude"), false);
     assert.equal(providerSupportsDevinDiscovery(null), false);

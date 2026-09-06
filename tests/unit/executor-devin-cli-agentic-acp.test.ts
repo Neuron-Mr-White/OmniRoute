@@ -14,9 +14,8 @@ fs.mkdirSync(process.env.DATA_DIR, { recursive: true });
 
 const { assertLocalAcpUrl, buildDevinChildEnv, DevinCliAgenticExecutor } =
   await import("../../open-sse/executors/devin-cli-agentic.ts");
-const { devin_cli_agenticProvider } =
-  await import("../../open-sse/config/providers/registry/devin-cli-agentic/index.ts");
-const { getProviderCredentials } = await import("../../src/sse/services/auth.ts");
+const { devin_cliProvider } =
+  await import("../../open-sse/config/providers/registry/devin-cli/index.ts");
 
 async function readResponseText(response: Response) {
   return await response.text();
@@ -45,7 +44,9 @@ test("Devin child environment is allowlisted and requires an isolated home", () 
 
   assert.equal(env.HOME, isolatedHome);
   assert.equal(env.PATH, "/usr/bin:/bin");
-  assert.equal(env.WINDSURF_API_KEY, undefined);
+  // Merged provider: the oauth/subscription token reaches the CLI as
+  // WINDSURF_API_KEY (legacy text-only executor behavior preserved).
+  assert.equal(env.WINDSURF_API_KEY, "devin-test");
   assert.equal(env.ANTHROPIC_AUTH_TOKEN, undefined);
   assert.equal(env.AWS_ACCESS_KEY_ID, undefined);
   assert.equal(env.GITHUB_TOKEN, undefined);
@@ -107,16 +108,11 @@ test("Devin agentic upstream is fixed to local ACP stdio", () => {
   assert.throws(() => assertLocalAcpUrl("http://localhost:9999"), /ACP stdio/);
 });
 
-test("Devin agentic provider delegates auth only to the isolated CLI", () => {
-  assert.equal(devin_cli_agenticProvider.authType, "none");
-  assert.equal(devin_cli_agenticProvider.baseUrl, "devin://acp/stdio");
-  assert.equal(devin_cli_agenticProvider.baseUrls, undefined);
-});
-
-test("Devin agentic provider resolves synthetic no-auth credentials without a DB row", async () => {
-  const credentials = await getProviderCredentials("devin-cli-agentic");
-  assert.equal(credentials?.connectionId, "noauth");
-  assert.equal(credentials?.apiKey, null);
+test("Merged devin-cli provider keeps the local ACP surface and oauth auth", () => {
+  assert.equal(devin_cliProvider.authType, "oauth");
+  assert.equal(devin_cliProvider.executor, "devin-cli-agentic");
+  assert.equal(devin_cliProvider.baseUrl, "devin://acp/stdio");
+  assert.equal(devin_cliProvider.baseUrls, undefined);
 });
 
 function writeMockDevin(tmpDir: string, responseText: string) {

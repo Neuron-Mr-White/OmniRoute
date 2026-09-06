@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { devin_cliProvider } from "../../open-sse/config/providers/registry/devin-cli/index.ts";
-import { devin_cli_agenticProvider } from "../../open-sse/config/providers/registry/devin-cli-agentic/index.ts";
 import { devin_desktopProvider } from "../../open-sse/config/providers/registry/devin-desktop/index.ts";
 import { DEVIN_MODEL_CATALOG } from "../../open-sse/config/providers/registry/devin/catalog.ts";
 import { DEVIN_MODEL_PRICING } from "../../src/shared/constants/pricing/devin.ts";
@@ -11,12 +10,14 @@ import { DEFAULT_PRICING, getPricingForModel } from "../../src/shared/constants/
 const catalogIds = DEVIN_MODEL_CATALOG.map((model) => model.id);
 
 test("Devin transports expose the same curated catalog without duplicate ids", () => {
-  assert.equal(devin_cliProvider.models, DEVIN_MODEL_CATALOG);
   assert.equal(devin_desktopProvider.models, DEVIN_MODEL_CATALOG);
+  // The merged devin-cli provider maps the catalog onto the agentic shape
+  // (toolCalling on) — same ids, enriched entries.
   assert.deepEqual(
-    devin_cli_agenticProvider.models.map((model) => model.id),
+    devin_cliProvider.models.map((model) => model.id),
     catalogIds
   );
+  assert.ok(devin_cliProvider.models.every((model) => model.toolCalling === true));
   assert.equal(catalogIds.length, 110);
   assert.equal(new Set(catalogIds).size, catalogIds.length);
   assert.ok(catalogIds.every((id) => !id.toLowerCase().includes("byok")));

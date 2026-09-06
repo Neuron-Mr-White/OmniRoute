@@ -5,8 +5,7 @@ import fs from "node:fs";
 import type { SyncedAvailableModelInput } from "@/lib/db/models/synced";
 
 /**
- * Live model discovery for the Devin CLI providers (`devin-cli-agentic` / dva,
- * `devin-cli` / dv).
+ * Live model discovery for the Devin CLI provider (`devin-cli`, alias dva).
  *
  * These providers have no HTTP model-list endpoint — the only authoritative
  * source is the authenticated official Devin CLI:
@@ -24,7 +23,7 @@ const DEVIN_DISCOVERY_TIMEOUT_MS = 30_000;
 const DEVIN_DISCOVERY_MAX_BUFFER = 8 * 1024 * 1024;
 
 /** Providers whose model list is discovered via the Devin CLI. */
-const DEVIN_DISCOVERY_PROVIDERS = new Set(["devin-cli-agentic", "devin-cli"]);
+const DEVIN_DISCOVERY_PROVIDERS = new Set(["devin-cli"]);
 
 export function providerSupportsDevinDiscovery(provider: string | null | undefined): boolean {
   return (

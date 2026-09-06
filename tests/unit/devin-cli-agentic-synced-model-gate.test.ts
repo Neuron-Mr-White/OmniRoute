@@ -87,7 +87,7 @@ async function runExecutor(model: string) {
 }
 
 test("synced-only devin model id routes (dashboard sync widens the gate)", async () => {
-  await replaceSyncedAvailableModelsForConnection("devin-cli-agentic", "sync-gate-test", [
+  await replaceSyncedAvailableModelsForConnection("devin-cli", "sync-gate-test", [
     { id: "glm-9-preview-synced", name: "GLM 9 Preview (synced)" },
   ]);
   const result = await runExecutor("glm-9-preview-synced");
