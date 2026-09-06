@@ -142,7 +142,14 @@ export const OAUTH_PROVIDERS = {
     subscriptionRisk: true,
     riskNoticeVariant: "oauth",
   },
-  github: { id: "github", serviceKinds: ["llm"], alias: "gh", name: "GitHub Copilot", icon: "code", color: "#333333" },
+  github: {
+    id: "github",
+    serviceKinds: ["llm"],
+    alias: "gh",
+    name: "GitHub Copilot",
+    icon: "code",
+    color: "#333333",
+  },
   "gitlab-duo": {
     id: "gitlab-duo",
     serviceKinds: ["llm"],
@@ -276,13 +283,13 @@ export const OAUTH_PROVIDERS = {
   "devin-cli": {
     id: "devin-cli",
     serviceKinds: ["llm"],
-    alias: "dv",
+    alias: "dva",
     name: "Devin CLI",
     icon: "terminal",
     color: "#6366F1",
     textIcon: "DV",
     authHint:
-      "Requires the Devin CLI binary. Run `devin auth login` to authenticate, or provide your WINDSURF_API_KEY. Install: https://cli.devin.ai",
+      "Single Devin CLI provider: full agentic bridge (Claude Messages format, tool translation) under the dva/ prefix. Authenticate via the subscription token import or `devin auth login` inside the bridge sandbox. Install: https://cli.devin.ai",
     website: "https://cli.devin.ai",
   },
   "codebuddy-cn": {
