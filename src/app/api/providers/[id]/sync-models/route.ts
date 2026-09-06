@@ -540,6 +540,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
       const previous = await getSyncedAvailableModelsForConnection(logProvider, id);
       const synced = await replaceSyncedAvailableModelsForConnection(logProvider, id, discovered);
+      // The two Devin CLI lanes share one account and one live catalog but
+      // separate provider ids (dv=devin-cli, dva=devin-cli-agentic, which is
+      // noAuth and has no connection row of its own). Persist under the
+      // sibling too so the agentic lane's model list and executor gate see
+      // the same discovery.
+      const devinSibling =
+        logProvider === "devin-cli"
+          ? "devin-cli-agentic"
+          : logProvider === "devin-cli-agentic"
+            ? "devin-cli"
+            : null;
+      if (devinSibling) {
+        await replaceSyncedAvailableModelsForConnection(devinSibling, id, discovered);
+      }
       const prevIds = new Set(previous.map((m) => String(m.id)));
       const added = synced.filter((m) => !prevIds.has(String(m.id))).length;
       const removed = previous.filter(

@@ -436,8 +436,14 @@ function isKnownStaticDevinModel(model: string): boolean {
 async function loadSyncedDevinModelIds(): Promise<Set<string>> {
   try {
     const { getSyncedAvailableModels } = await import("@/lib/db/models");
-    const models = await getSyncedAvailableModels("devin-cli-agentic");
-    return new Set(models.map((entry) => String(entry.id)));
+    // Union both Devin CLI lanes (dv=devin-cli, dva=devin-cli-agentic): they
+    // share one account and one live catalog, and the dashboard sync may have
+    // run from either provider's page.
+    const [agentic, cli] = await Promise.all([
+      getSyncedAvailableModels("devin-cli-agentic"),
+      getSyncedAvailableModels("devin-cli"),
+    ]);
+    return new Set([...agentic, ...cli].map((entry) => String(entry.id)));
   } catch {
     return new Set();
   }
