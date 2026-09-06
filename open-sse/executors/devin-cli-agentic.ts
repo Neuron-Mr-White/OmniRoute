@@ -154,17 +154,20 @@ export function buildDevinChildEnv(
     env.HTTPS_PROXY = TRUSTED_DEVIN_BRIDGE_PROXY_URL;
   }
 
-  // Devin subscription credentials: the merged devin-cli provider authenticates
-  // via the operator's oauth connection; the token reaches the CLI the same way
-  // the legacy text-only executor passed it (WINDSURF_API_KEY). When absent the
-  // CLI falls back to its own `devin auth login` state inside the sandbox HOME.
-  const subscriptionToken =
-    typeof credentials?.accessToken === "string" && credentials.accessToken.trim()
-      ? credentials.accessToken.trim()
-      : typeof credentials?.apiKey === "string" && credentials.apiKey.trim()
-        ? credentials.apiKey.trim()
-        : "";
-  if (subscriptionToken) env.WINDSURF_API_KEY = subscriptionToken;
+  // Subscription token passthrough is OPT-IN (DEVIN_BRIDGE_USE_SUBSCRIPTION_TOKEN=1).
+  // Live lesson: the dashboard oauth connection's token can be stale while the
+  // sandbox's own `devin auth login` state is perfectly healthy — injecting the
+  // stale token as WINDSURF_API_KEY made the CLI prefer it and broke ALL routing
+  // ("All 1 connection(s) authentication error"). Default: sandbox-owned auth.
+  if (source.DEVIN_BRIDGE_USE_SUBSCRIPTION_TOKEN === "1") {
+    const subscriptionToken =
+      typeof credentials?.accessToken === "string" && credentials.accessToken.trim()
+        ? credentials.accessToken.trim()
+        : typeof credentials?.apiKey === "string" && credentials.apiKey.trim()
+          ? credentials.apiKey.trim()
+          : "";
+    if (subscriptionToken) env.WINDSURF_API_KEY = subscriptionToken;
+  }
 
   for (const key of CLAUDE_ENV_BLOCKLIST) delete env[key];
   return env;

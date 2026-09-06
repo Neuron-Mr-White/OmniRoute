@@ -44,9 +44,19 @@ test("Devin child environment is allowlisted and requires an isolated home", () 
 
   assert.equal(env.HOME, isolatedHome);
   assert.equal(env.PATH, "/usr/bin:/bin");
-  // Merged provider: the oauth/subscription token reaches the CLI as
-  // WINDSURF_API_KEY (legacy text-only executor behavior preserved).
-  assert.equal(env.WINDSURF_API_KEY, "devin-test");
+  // Subscription passthrough is opt-in: sandbox-owned auth by default (live
+  // lesson — stale dashboard tokens must never override the sandbox login).
+  assert.equal(env.WINDSURF_API_KEY, undefined);
+  const optedIn = buildDevinChildEnv(
+    { apiKey: "devin-test" },
+    {
+      HOME: "/Users/example",
+      PATH: "/usr/bin:/bin",
+      DEVIN_AGENTIC_HOME: isolatedHome,
+      DEVIN_BRIDGE_USE_SUBSCRIPTION_TOKEN: "1",
+    }
+  );
+  assert.equal(optedIn.WINDSURF_API_KEY, "devin-test");
   assert.equal(env.ANTHROPIC_AUTH_TOKEN, undefined);
   assert.equal(env.AWS_ACCESS_KEY_ID, undefined);
   assert.equal(env.GITHUB_TOKEN, undefined);
