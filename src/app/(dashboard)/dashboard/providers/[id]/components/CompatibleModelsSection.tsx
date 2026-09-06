@@ -147,6 +147,7 @@ export default function CompatibleModelsSection({
       source: string;
       isFree: boolean;
       isHidden: boolean;
+      isNew: boolean;
     }> = [];
     const seenModelIds = new Set<string>();
 
@@ -170,6 +171,9 @@ export default function CompatibleModelsSection({
           /\bgr[aá]tis\b|\bfree\b/i.test(model.name || "") ||
           isFreeModel(providerStorageAlias, { id: model.id, isFree: (model as any).isFree }),
         isHidden: isModelHidden(model.id),
+        // Live discovery (e.g. devin models list) flags brand-new upstream
+        // models in the description — surface that in the row.
+        isNew: /(?:^|\s·\s)new(?:$|\s|\b)/i.test(String((model as any).description || "")),
       });
       seenModelIds.add(model.id);
     };
@@ -429,43 +433,46 @@ export default function CompatibleModelsSection({
             onAutoHideFailedChange={onAutoHideFailedChange}
           />
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-            {displayModels.map(({ modelId, alias, displayName, isHidden, source, isFree }) => {
-              const fullModel = `${providerDisplayAlias}/${modelId}`;
-              return (
-                <PassthroughModelRow
-                  key={`${providerStorageAlias}:${modelId}`}
-                  modelId={modelId}
-                  fullModel={fullModel}
-                  alias={alias}
-                  displayName={displayName}
-                  source={source}
-                  isFree={isFree}
-                  isHidden={isHidden}
-                  copied={copied}
-                  onCopy={onCopy}
-                  onDeleteAlias={
-                    source === "custom" || source === "manual"
-                      ? () => handleDeleteModel(modelId, alias)
-                      : source === "alias" && alias
-                        ? () => onDeleteAlias(alias)
-                        : undefined
-                  }
-                  onSetAlias={(a) => onSetAlias(modelId, a, providerStorageAlias)}
-                  t={t}
-                  showDeveloperToggle={!isAnthropic}
-                  effectiveModelNormalize={effectiveModelNormalize}
-                  effectiveModelPreserveDeveloper={effectiveModelPreserveDeveloper}
-                  getUpstreamHeadersRecord={(p) => getUpstreamHeadersRecord(modelId, p)}
-                  saveModelCompatFlags={saveModelCompatFlags}
-                  compatDisabled={compatSavingModelId === modelId}
-                  onToggleHidden={onToggleHidden}
-                  togglingHidden={togglingModelId === modelId}
-                  onTestModel={onTestModel}
-                  testStatus={modelTestStatus?.[modelId] || null}
-                  testingModel={testingModelId === modelId}
-                />
-              );
-            })}
+            {displayModels.map(
+              ({ modelId, alias, displayName, isHidden, source, isFree, isNew }) => {
+                const fullModel = `${providerDisplayAlias}/${modelId}`;
+                return (
+                  <PassthroughModelRow
+                    key={`${providerStorageAlias}:${modelId}`}
+                    modelId={modelId}
+                    fullModel={fullModel}
+                    alias={alias}
+                    displayName={displayName}
+                    source={source}
+                    isFree={isFree}
+                    isNew={isNew}
+                    isHidden={isHidden}
+                    copied={copied}
+                    onCopy={onCopy}
+                    onDeleteAlias={
+                      source === "custom" || source === "manual"
+                        ? () => handleDeleteModel(modelId, alias)
+                        : source === "alias" && alias
+                          ? () => onDeleteAlias(alias)
+                          : undefined
+                    }
+                    onSetAlias={(a) => onSetAlias(modelId, a, providerStorageAlias)}
+                    t={t}
+                    showDeveloperToggle={!isAnthropic}
+                    effectiveModelNormalize={effectiveModelNormalize}
+                    effectiveModelPreserveDeveloper={effectiveModelPreserveDeveloper}
+                    getUpstreamHeadersRecord={(p) => getUpstreamHeadersRecord(modelId, p)}
+                    saveModelCompatFlags={saveModelCompatFlags}
+                    compatDisabled={compatSavingModelId === modelId}
+                    onToggleHidden={onToggleHidden}
+                    togglingHidden={togglingModelId === modelId}
+                    onTestModel={onTestModel}
+                    testStatus={modelTestStatus?.[modelId] || null}
+                    testingModel={testingModelId === modelId}
+                  />
+                );
+              }
+            )}
           </div>
           {filteredModels.length === 0 && modelFilter && (
             <p className="py-2 text-sm text-text-muted">

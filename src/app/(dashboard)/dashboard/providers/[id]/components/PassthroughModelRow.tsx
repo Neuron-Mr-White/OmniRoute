@@ -29,6 +29,7 @@ export interface PassthroughModelRowProps {
   displayName?: string | null;
   source?: string;
   isFree?: boolean;
+  isNew?: boolean;
   isHidden?: boolean;
   copied?: string;
   onCopy: (text: string, key: string) => void;
@@ -59,6 +60,7 @@ export default function PassthroughModelRow({
   displayName,
   source,
   isFree,
+  isNew,
   isHidden,
   copied,
   onCopy,
@@ -175,6 +177,11 @@ export default function PassthroughModelRow({
       <div className="flex min-w-0 items-center justify-between gap-2">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <ModelSourceBadge source={source} />
+          {isNew && (
+            <Badge variant="default" className="shrink-0 px-1.5 py-0 text-[10px]">
+              New
+            </Badge>
+          )}
           {isFree && (
             <Badge variant="success" className="shrink-0 px-1.5 py-0 text-[10px]">
               {providerText(t, "freeBadge", "Free")}
