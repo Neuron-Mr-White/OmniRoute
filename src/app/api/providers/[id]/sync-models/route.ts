@@ -25,6 +25,10 @@ import {
   fetchVolcPlanModels,
   providerToVolcPlanKind,
 } from "@/lib/providers/volcenginePlanModelDiscovery";
+import {
+  fetchDevinAvailableModels,
+  providerSupportsDevinDiscovery,
+} from "@/lib/providers/devinModelDiscovery";
 import { replaceSyncedAvailableModelsForConnection } from "@/lib/db/models";
 import { GET as getProviderModels } from "../models/route";
 import { isDegradedDiscovery } from "./degradedLocalCatalog";
@@ -498,6 +502,74 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         connectionId: id,
         source: "volcengine-plan-console-discovery",
         plan: volcPlanKind,
+        mode,
+        syncedModels: synced.length,
+        availableModelsCount: synced.length,
+        modelChanges: { added, removed, total: added + removed },
+        models: synced,
+      });
+    }
+
+    // Devin CLI providers: no HTTP model-list endpoint exists — the only
+    // authoritative source is the authenticated official Devin CLI
+    // (`devin models list --format json`) inside the bridge sandbox HOME.
+    if (providerSupportsDevinDiscovery(logProvider)) {
+      const duration = Date.now() - start;
+      let discovered;
+      try {
+        discovered = await fetchDevinAvailableModels();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        await saveCallLog({
+          method: "POST",
+          path: `/api/providers/${id}/sync-models`,
+          status: 502,
+          model: "model-sync",
+          provider: logProvider,
+          sourceFormat: "-",
+          connectionId: id,
+          duration,
+          error: message,
+          requestType: "model-sync",
+          ...(channelLabel ? { responseBody: { channel: channelLabel } } : {}),
+        }).catch(() => undefined);
+        return NextResponse.json(
+          { error: sanitizeErrorMessage(message) || "Devin model discovery failed" },
+          { status: 502 }
+        );
+      }
+      const previous = await getSyncedAvailableModelsForConnection(logProvider, id);
+      const synced = await replaceSyncedAvailableModelsForConnection(logProvider, id, discovered);
+      const prevIds = new Set(previous.map((m) => String(m.id)));
+      const added = synced.filter((m) => !prevIds.has(String(m.id))).length;
+      const removed = previous.filter(
+        (m) => !synced.some((n) => String(n.id) === String(m.id))
+      ).length;
+      await saveCallLog({
+        method: "GET",
+        path: `/api/providers/${id}/models`,
+        status: 200,
+        model: "model-sync",
+        provider: logProvider,
+        sourceFormat: "cli-discovery",
+        connectionId: id,
+        duration: Date.now() - start,
+        requestType: "model-sync",
+        responseBody: {
+          source: "devin-cli-models-discovery",
+          syncedModels: synced.length,
+          added,
+          removed,
+          provider: logProvider,
+          channel: channelLabel,
+          mode,
+        },
+      }).catch(() => undefined);
+      return NextResponse.json({
+        ok: true,
+        provider: logProvider,
+        connectionId: id,
+        source: "devin-cli-models-discovery",
         mode,
         syncedModels: synced.length,
         availableModelsCount: synced.length,

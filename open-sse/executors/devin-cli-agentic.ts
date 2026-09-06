@@ -422,14 +422,36 @@ export async function runAcpTurn(args: {
   });
 }
 
-function assertKnownDevinModel(model: string): void {
-  if (!DEVIN_MODEL_CATALOG.some((entry) => entry.id === model)) {
-    throw new DevinAgenticBridgeError(
-      `Model is not present in the current Devin catalog: ${model}`,
-      "unknown_devin_model",
-      400
-    );
+function isKnownStaticDevinModel(model: string): boolean {
+  return DEVIN_MODEL_CATALOG.some((entry) => entry.id === model);
+}
+
+/**
+ * Ids discovered live by the dashboard sync (`devin models list`, see
+ * src/lib/providers/devinModelDiscovery.ts) and persisted as synced
+ * AvailableModels. Loaded lazily so the executor module stays importable
+ * without a DB (unit tests, CLI tooling) and a DB failure simply narrows
+ * acceptance back to the static catalog.
+ */
+async function loadSyncedDevinModelIds(): Promise<Set<string>> {
+  try {
+    const { getSyncedAvailableModels } = await import("@/lib/db/models");
+    const models = await getSyncedAvailableModels("devin-cli-agentic");
+    return new Set(models.map((entry) => String(entry.id)));
+  } catch {
+    return new Set();
   }
+}
+
+async function assertRoutableDevinModel(model: string): Promise<void> {
+  if (isKnownStaticDevinModel(model)) return;
+  const synced = await loadSyncedDevinModelIds();
+  if (synced.has(model)) return;
+  throw new DevinAgenticBridgeError(
+    `Model is not present in the current Devin catalog: ${model}`,
+    "unknown_devin_model",
+    400
+  );
 }
 
 async function generateAgenticOutput(
@@ -470,7 +492,7 @@ export class DevinCliAgenticExecutor extends BaseExecutor {
 
   async execute({ model, body, stream, credentials, signal, log }: ExecuteInput) {
     try {
-      assertKnownDevinModel(model);
+      await assertRoutableDevinModel(model);
       const prompt = serializeAnthropicForDevin(body);
       const devinBin = resolveDevinBin();
       log?.info?.("DEVIN_AGENTIC", `devin acp → model=${model}, bin=${devinBin}`);
