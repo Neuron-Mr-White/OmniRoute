@@ -114,6 +114,10 @@ import {
   normalizeAzureModelsResponse,
 } from "./discovery/normalizers";
 import { isNamedOpenAIStyleProvider } from "./discovery/providerSets";
+import {
+  fetchDevinAvailableModels,
+  providerSupportsDevinDiscovery,
+} from "@/lib/providers/devinModelDiscovery";
 import { buildStaleEncryptionKeyResponse } from "./staleEncryptionGuard";
 import {
   type ProviderModelsConfigEntry,
@@ -357,6 +361,36 @@ export async function GET(
       if (status === 400 || status === 503 || status === 504) return null;
       return buildDiscoveryFallbackResponse(warnings);
     };
+
+    if (providerSupportsDevinDiscovery(provider)) {
+      // Devin CLI providers have no HTTP model-list endpoint — the official
+      // authenticated CLI (`devin models list --format json`, sandboxed HOME)
+      // is the only authoritative source. Falls back to the static curated
+      // catalog when the CLI is unavailable so model-sync degrades instead of
+      // hard-failing.
+      try {
+        const models = await fetchDevinAvailableModels();
+        return buildResponse({
+          provider,
+          connectionId,
+          source: "cli-discovery",
+          models: models.map((model) => ({
+            id: model.id,
+            name: model.name,
+            supportedEndpoints: model.supportedEndpoints,
+            inputTokenLimit: model.inputTokenLimit,
+            outputTokenLimit: model.outputTokenLimit,
+            description: model.description,
+          })),
+        });
+      } catch (err) {
+        const fallback = buildLocalCatalogResponse(
+          `Devin CLI model discovery failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+        if (fallback) return fallback;
+        throw err;
+      }
+    }
 
     if (provider === "adobe-firefly") {
       const discovery = await getAdobeModels(apiKey, accessToken, connection.providerSpecificData);
@@ -613,9 +647,7 @@ export async function GET(
       try {
         const discovery = await discoverMaxaiModels({
           providerSpecificData: connection.providerSpecificData as
-            | Record<string, unknown>
-            | null
-            | undefined,
+            Record<string, unknown> | null | undefined,
           accessToken: apiKey || accessToken,
           fetchImpl: (url, init) =>
             safeOutboundFetch(url, {
