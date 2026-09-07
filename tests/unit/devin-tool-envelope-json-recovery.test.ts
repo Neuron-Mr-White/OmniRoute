@@ -191,3 +191,30 @@ describe("parseDevinToolRequest — missing-colon JSON recovery", () => {
     );
   });
 });
+
+describe("parseDevinToolRequest — escalating JSON repair ladder", () => {
+  const tools = [
+    {
+      name: "read",
+      description: "read",
+      input_schema: { type: "object", properties: { path: { type: "string" } } },
+    },
+  ];
+
+  it("repairs a missing comma between properties", () => {
+    const tool = parseDevinToolRequest(
+      '<tool>{"name":"read","arguments":{"path":"/tmp/a.log"} "extra":1}</tool>',
+      tools
+    );
+    assert.equal(tool?.name, "read");
+  });
+
+  it("repairs colon and comma slips together", () => {
+    const tool = parseDevinToolRequest(
+      '<tool>{"name" "read" "arguments":{"path":"/tmp/b.log"}}</tool>',
+      tools
+    );
+    assert.equal(tool?.name, "read");
+    assert.deepEqual(tool?.input, { path: "/tmp/b.log" });
+  });
+});

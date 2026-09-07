@@ -113,23 +113,112 @@ function recoverEnvelopeJson(raw: string): JsonRecord | null {
   try {
     return asRecord(JSON.parse(extracted));
   } catch {
-    // Last-resort shape repairs for frontier-model JSON slips (live repro:
-    // "Expected ':' after property name" — e.g. `"name" "run_subagent"` or
-    // `"arguments" {`). Insert the missing colon between a string key and a
-    // following value token, then retry once.
-    const colonFixed = extracted.replace(
-      /"([^"\\]+)"\s+(?=["{\[\d])/g,
-      '"$1": '
-    );
-    if (colonFixed !== extracted) {
+    // Position-aware repair (regex cannot tell key slot from value slot):
+    // a string in KEY position missing its ':' (`"name" "read"`) and a value
+    // end missing its ',' before the next entry (`"read" "arguments"`).
+    const repaired = repairJsonSlips(extracted);
+    if (repaired !== extracted) {
       try {
-        return asRecord(JSON.parse(colonFixed));
+        return asRecord(JSON.parse(repaired));
       } catch {
         return null;
       }
     }
     return null;
   }
+}
+
+// Tiny stateful JSON slip repairer for tool envelopes. Tracks object/array
+// frames and key/value expectation so it inserts the RIGHT missing token:
+// ':' after a key string, ',' between a completed value and the next token.
+function repairJsonSlips(input: string): string {
+  const isValueStart = (c: string) =>
+    c === '"' || c === "{" || c === "[" || /[\d-]/.test(c) || /^[tfn]/.test(c);
+  type Frame = { kind: "o" | "a"; wantKey: boolean };
+  const frames: Frame[] = [];
+  let out = "";
+  let i = 0;
+  let lastWasValue = false;
+  const n = input.length;
+  const frame = () => frames[frames.length - 1];
+  while (i < n) {
+    const c = input[i];
+    if (/\s/.test(c)) {
+      out += c;
+      i += 1;
+      continue;
+    }
+    if (c === "{" || c === "[") {
+      frames.push({ kind: c === "{" ? "o" : "a", wantKey: c === "{" });
+      out += c;
+      lastWasValue = false;
+      i += 1;
+      continue;
+    }
+    if (c === "}" || c === "]") {
+      frames.pop();
+      out += c;
+      lastWasValue = true;
+      i += 1;
+      continue;
+    }
+    if (c === "," || c === ":") {
+      if (c === "," && frame()?.kind === "o") frame()!.wantKey = true;
+      if (c === ":" && frame()?.kind === "o") frame()!.wantKey = false;
+      out += c;
+      lastWasValue = false;
+      i += 1;
+      continue;
+    }
+    if (c === '"') {
+      let j = i + 1;
+      let str = '"';
+      while (j < n) {
+        if (input[j] === "\\" && j + 1 < n) {
+          str += input[j] + input[j + 1];
+          j += 2;
+          continue;
+        }
+        str += input[j];
+        if (input[j] === '"') break;
+        j += 1;
+      }
+      const tokenEnd = j;
+      let b = tokenEnd + 1;
+      while (b < n && /\s/.test(input[b])) b += 1;
+      const next = b < n ? input[b] : "";
+      let prefix = "";
+      let suffix = "";
+      const current = frame();
+      const inObject = current?.kind === "o";
+      if (lastWasValue && next && next !== "," && next !== "}" && next !== "]") {
+        prefix = ",";
+      }
+      if (current && inObject && current.wantKey && next && next !== ":" && isValueStart(next)) {
+        suffix = ":";
+      }
+      out += prefix + str + suffix;
+      if (current && inObject) {
+        if (suffix === ":") current.wantKey = false;
+        else if (!current.wantKey) lastWasValue = true;
+      } else {
+        lastWasValue = true;
+      }
+      i = tokenEnd + 1;
+      continue;
+    }
+    // numbers / literals: consume the run, mark a value complete
+    const m = /^[^,{}\[\]\s"]+/u.exec(input.slice(i));
+    if (m) {
+      out += m[0];
+      i += m[0].length;
+    } else {
+      out += c;
+      i += 1;
+    }
+    lastWasValue = true;
+  }
+  return out;
 }
 
 export function parseDevinToolRequest(text: string, tools: AnthropicTool[], idSeed = "") {
@@ -190,7 +279,7 @@ export function parseDevinToolRequest(text: string, tools: AnthropicTool[], idSe
       throw new DevinAgenticBridgeError(
         `Devin tool request was not valid JSON: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        } [raw body: ${(matches[0][1] || "").slice(0, 160)}]`,
         "invalid_tool_json"
       );
     }
