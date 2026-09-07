@@ -58,21 +58,35 @@ function isExecutionTraceEcho(text: string): boolean {
 }
 
 function describesUnexecutedToolIntent(text: string): boolean {
-  const action = "(?:read|inspect|examine|edit|fix|run|check|test|start)";
+  const action =
+    "(?:read|inspect|examine|explore|compare|edit|fix|create|add|update|polish|improve|restructure|implement|run|check|test|start|set\\s+up|configure|clone|fetch|apply|understand|plan)";
   const futureAction = new RegExp(
-    `\\b(?:(?:next(?: immediate)?|immediate next)\\s+(?:task|step)|planned actions?)\\b[\\s\\S]{0,320}\\b${action}\\b`,
+    `\\b(?:(?:next(?: immediate)?|immediate next)\\s+(?:tasks?|steps?)|planned actions?)\\b[\\s\\S]{0,320}\\b${action}\\b`,
     "i"
   );
   return (
     futureAction.test(text) ||
     new RegExp(`\\b(?:i(?:'ll| will)|let me)\\b[^\\n.!?]{0,160}\\b${action}\\b`, "i").test(text) ||
     new RegExp(`\\bnext steps?\\s*:\\s*${action}\\b`, "i").test(text) ||
+    // "Next Steps" section header followed (within 3 lines) by an action bullet
+    // (live fable-5-1-low session: "Next Steps:\n - Examine current admin UI ...")
+    new RegExp(
+      `\\bnext steps?\\b[^\\n]{0,80}\\n(?:[^\\n]{0,120}\\n){0,2}\\s*(?:[-*>\u2022]\\s*)?${action}\\b`,
+      "i"
+    ).test(text) ||
     new RegExp(`\\bnext immediate (?:task|step)\\s*:\\s*${action}\\b`, "i").test(text) ||
     new RegExp(`\\bplanned actions?\\s*:\\s*${action}\\b`, "i").test(text) ||
     new RegExp(`\\b(?:still|now)\\s+(?:need|needs|required)\\s+to\\s+${action}\\b`, "i").test(
       text
     ) ||
-    /\btests?\s+(?:have|has|were|was)?\s*not\s+(?:yet\s+)?(?:been\s+)?run\b/i.test(text)
+    /\btests?\s+(?:have|has|were|was)?\s*not\s+(?:yet\s+)?(?:been\s+)?run\b/i.test(text) ||
+    // Status-report narration (live fable-5-1-low session ended in a "<summary>"
+    // status report: "Current Iteration: 1/20", "In Progress: ...",
+    // "The agent is actively working on the first iteration"). None of these
+    // belong in a genuine final answer; finals describe completed work.
+    /\bin progress\b/i.test(text) ||
+    /\bcurrent iteration\b/i.test(text) ||
+    /\b(?:is|are)\s+(?:actively\s+)?(?:working|examining|exploring|implementing)\b/i.test(text)
   );
 }
 

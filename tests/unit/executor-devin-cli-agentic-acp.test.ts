@@ -581,3 +581,59 @@ rl.on("line", (line) => {
     fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
+
+test("status-report summary (current iteration / in progress / next-steps bullets) is repaired into a tool call", async () => {
+  const tmpDir = sandboxTmp("devin-agentic-status-report-");
+  const stateFile = path.join(tmpDir, "spawn-count");
+  const scriptFile = writeScenarioMock(
+    tmpDir,
+    `const fs = require("fs");
+const stateFile = ${JSON.stringify(stateFile)};
+const count = Number(fs.existsSync(stateFile) ? fs.readFileSync(stateFile, "utf8") : "0") + 1;
+fs.writeFileSync(stateFile, String(count));
+rl.on("line", (line) => {
+  const msg = JSON.parse(line);
+  if (acceptAskMode(msg)) return;
+  if (msg.method === "initialize") send({ jsonrpc: "2.0", id: msg.id, result: { protocolVersion: 1 } });
+  if (msg.method === "session/new") sendSession(msg, "status-report");
+  if (msg.method === "session/prompt") {
+    // Live fable-5-1-low regression: session ends with a status report instead of a tool call
+    const text = count === 1
+      ? "<summary>\\n## Overview\\nWorking on admin UI/UX polish using a Ralph loop.\\n## Current State\\nThe agent is actively working on the first iteration.\\n- **Current Iteration**: 1/20, working on ~2 items per iteration\\n## Next Steps\\n - Examine current admin UI implementation to understand existing structure\\n - Compare with OmniRoute's list page pattern\\n</summary>"
+      : '<tool>{"name":"Read","arguments":{"file_path":"web/src/routes/settings.tsx"}}</tool>';
+    send({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "status-report", update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text } } } });
+    send({ jsonrpc: "2.0", id: msg.id, result: { stopReason: "end_turn" } });
+  }
+});`
+  );
+  const oldBin = process.env.CLI_DEVIN_AGENTIC_BIN;
+  process.env.CLI_DEVIN_AGENTIC_BIN = scriptFile;
+  try {
+    const result = await new DevinCliAgenticExecutor().execute({
+      model: "swe-1-7",
+      stream: false,
+      credentials: {},
+      body: {
+        tools: [
+          {
+            name: "Read",
+            input_schema: {
+              type: "object",
+              required: ["file_path"],
+              properties: { file_path: { type: "string" } },
+            },
+          },
+        ],
+        messages: [{ role: "user", content: "Read settings.tsx" }],
+      },
+    });
+    assert.equal(result.response.status, 200, await result.response.clone().text());
+    const body = JSON.parse(await result.response.text());
+    assert.equal(body.stop_reason, "tool_use");
+    assert.equal(fs.readFileSync(stateFile, "utf8"), "2");
+  } finally {
+    if (oldBin === undefined) delete process.env.CLI_DEVIN_AGENTIC_BIN;
+    else process.env.CLI_DEVIN_AGENTIC_BIN = oldBin;
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
