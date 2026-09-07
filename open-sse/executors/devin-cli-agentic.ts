@@ -578,39 +578,84 @@ export class DevinCliAgenticExecutor extends BaseExecutor {
         ) {
           throw error;
         }
-        const requiresToolOnRepair = error.code === "unexecuted_tool_intent";
-        // Live lesson (dva): unknown_tool repairs fail when the model repeats
-        // its native-harness tool (run_subagent etc.) — enumerate the closed
-        // catalog so the second attempt picks a real tool.
-        const unknownToolCatalog =
-          error.code === "unknown_tool" && prompt.tools.length > 0
-            ? `The ONLY tools that exist for this session are: ${prompt.tools
-                .map((candidate) => candidate.name)
-                .join(", ")}. Never request tools outside this list (run_subagent and other native tools do not exist here).`
-            : "";
-        const repairPrompt = [
-          prompt.text,
-          "",
-          "---",
-          "",
-          "[Single Repair Attempt]",
-          `The previous output was rejected: ${sanitizeErrorMessage(error.message)}`,
-          unknownToolCatalog,
-          requiresToolOnRepair
-            ? "Plain text is not accepted for this repair. Return exactly one standalone <tool> JSON envelope now."
-            : "Return either plain final text or exactly one standalone <tool> JSON envelope.",
-          "Do not narrate a tool action.",
-        ]
-          .filter((line) => line !== "")
-          .join("\n");
-        text = await generateAgenticOutput(turnArgs, repairPrompt);
-        tool = parseDevinToolRequest(text, prompt.tools, prompt.idSeed);
-        if (requiresToolOnRepair && !tool) {
-          throw new DevinAgenticBridgeError(
-            "Devin repeated a narrated tool action instead of requesting a tool",
-            "unexecuted_tool_intent",
-            502
-          );
+        // Long-horizon resilience (live lessons): one repair is sometimes not
+        // enough — the model repeats its native-harness tool (run_subagent) or
+        // re-emits malformed JSON, and a 4xx KILLS the whole client run. Use a
+        // bounded repair loop (2 attempts, each naming the exact failure and,
+        // for unknown_tool, the closed catalog), then fail OPEN as informative
+        // text instead of erroring, so the outer agent can self-correct on its
+        // next turn. Only poison-text modes (fabricated transcripts, narrated
+        // intent shipped as final) still fail closed.
+        const POISON_TEXT_CODES = new Set(["unexecuted_tool_intent", "trace_format_echo"]);
+        const MAX_REPAIR_ATTEMPTS = 2;
+        let repairError: unknown = error;
+        for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
+          const current =
+            repairError instanceof DevinAgenticBridgeError ? repairError : undefined;
+          const code = current?.code ?? "";
+          const requiresTool = code === "unexecuted_tool_intent";
+          const unknownToolCatalog =
+            code === "unknown_tool" && prompt.tools.length > 0
+              ? `The ONLY tools that exist for this session are: ${prompt.tools
+                  .map((candidate) => candidate.name)
+                  .join(", ")}. Never request tools outside this list (run_subagent and other native tools do not exist here).`
+              : "";
+          const repairPrompt = [
+            prompt.text,
+            "",
+            "---",
+            "",
+            `[Repair Attempt ${attempt} of ${MAX_REPAIR_ATTEMPTS}]`,
+            `The previous output was rejected: ${
+              current ? sanitizeErrorMessage(current.message) : "invalid tool request"
+            }`,
+            unknownToolCatalog,
+            requiresTool
+              ? "Plain text is not accepted for this repair. Return exactly one standalone <tool> JSON envelope now."
+              : "Return either plain final text or exactly one standalone <tool> JSON envelope with strictly valid JSON.",
+            "Do not narrate a tool action.",
+          ]
+            .filter((line) => line !== "")
+            .join("\n");
+          text = await generateAgenticOutput(turnArgs, repairPrompt);
+          try {
+            tool = parseDevinToolRequest(text, prompt.tools, prompt.idSeed);
+            break;
+          } catch (nextError) {
+            repairError = nextError;
+            const nextCode =
+              nextError instanceof DevinAgenticBridgeError ? nextError.code : "";
+            if (!REPAIRABLE_TOOL_ERRORS.has(nextCode)) throw nextError;
+          }
+        }
+        if (!tool) {
+          const finalCode =
+            repairError instanceof DevinAgenticBridgeError ? repairError.code : "";
+          if (finalCode === "unexecuted_tool_intent") {
+            throw new DevinAgenticBridgeError(
+              "Devin repeated a narrated tool action instead of requesting a tool",
+              "unexecuted_tool_intent",
+              502
+            );
+          }
+          if (POISON_TEXT_CODES.has(finalCode)) {
+            throw repairError;
+          }
+          // Fail OPEN: informative text beats a session-killing 4xx. The outer
+          // agent sees this as its own assistant message and can re-issue the
+          // tool call correctly on the next turn.
+          text = [
+            "[devin bridge] The last tool request could not be processed: " +
+              (repairError instanceof Error
+                ? sanitizeErrorMessage(repairError.message)
+                : "invalid tool request") +
+              ".",
+            `This is recoverable: re-issue the tool call now as a single valid envelope, choosing ONLY from the declared tools${
+              prompt.tools.length > 0
+                ? ` (${prompt.tools.map((candidate) => candidate.name).join(", ")})`
+                : ""
+            }.`,
+          ].join("\n");
         }
       }
 

@@ -109,10 +109,25 @@ function recoverEnvelopeJson(raw: string): JsonRecord | null {
   }
   if (end === -1) return null;
 
-  const extracted = candidate.slice(start, end + 1).replace(/,\s*([}\]])/g, "$1");
+  let extracted = candidate.slice(start, end + 1).replace(/,\s*([}\]])/g, "$1");
   try {
     return asRecord(JSON.parse(extracted));
   } catch {
+    // Last-resort shape repairs for frontier-model JSON slips (live repro:
+    // "Expected ':' after property name" — e.g. `"name" "run_subagent"` or
+    // `"arguments" {`). Insert the missing colon between a string key and a
+    // following value token, then retry once.
+    const colonFixed = extracted.replace(
+      /"([^"\\]+)"\s+(?=["{\[\d])/g,
+      '"$1": '
+    );
+    if (colonFixed !== extracted) {
+      try {
+        return asRecord(JSON.parse(colonFixed));
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 }

@@ -693,3 +693,62 @@ rl.on("line", (line) => {
     fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
+
+test("repair-exhausted tool errors fail OPEN as informative text (long-horizon survival)", async () => {
+  const tmpDir = sandboxTmp("devin-agentic-fail-open-");
+  const stateFile = path.join(tmpDir, "spawn-count");
+  const scriptFile = writeScenarioMock(
+    tmpDir,
+    `const fs = require("fs");
+const stateFile = ${JSON.stringify(stateFile)};
+const count = Number(fs.existsSync(stateFile) ? fs.readFileSync(stateFile, "utf8") : "0") + 1;
+fs.writeFileSync(stateFile, String(count));
+rl.on("line", (line) => {
+  const msg = JSON.parse(line);
+  if (acceptAskMode(msg)) return;
+  if (msg.method === "initialize") send({ jsonrpc: "2.0", id: msg.id, result: { protocolVersion: 1 } });
+  if (msg.method === "session/new") sendSession(msg, "fail-open");
+  if (msg.method === "session/prompt") {
+    // Live repro: the model stubbornly requests its native tool every time
+    const text = '<tool>{"name":"run_subagent","arguments":{"subagent_prompt":"x"}}</tool>';
+    send({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "fail-open", update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text } } } });
+    send({ jsonrpc: "2.0", id: msg.id, result: { stopReason: "end_turn" } });
+  }
+});`
+  );
+  const oldBin = process.env.CLI_DEVIN_AGENTIC_BIN;
+  process.env.CLI_DEVIN_AGENTIC_BIN = scriptFile;
+  try {
+    const result = await new DevinCliAgenticExecutor().execute({
+      model: "swe-1-7",
+      stream: false,
+      credentials: {},
+      body: {
+        tools: [
+          {
+            name: "Read",
+            input_schema: {
+              type: "object",
+              required: ["file_path"],
+              properties: { file_path: { type: "string" } },
+            },
+          },
+        ],
+        messages: [{ role: "user", "content": "Read a.ts" }],
+      },
+    });
+    // NOT a 400 — informative text so the outer agent can self-correct
+    assert.equal(result.response.status, 200, await result.response.clone().text());
+    const body = JSON.parse(await result.response.text());
+    const textBlocks = (body.content || []).filter((b: any) => b.type === "text");
+    assert.equal(textBlocks.length > 0, true);
+    assert.match(textBlocks[0].text, /devin bridge/);
+    assert.match(textBlocks[0].text, /Read/);
+    // initial + 2 repair attempts
+    assert.equal(fs.readFileSync(stateFile, "utf8"), "3");
+  } finally {
+    if (oldBin === undefined) delete process.env.CLI_DEVIN_AGENTIC_BIN;
+    else process.env.CLI_DEVIN_AGENTIC_BIN = oldBin;
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});

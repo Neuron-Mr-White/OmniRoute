@@ -165,3 +165,29 @@ describe("parseDevinToolRequest — unclosed trailing envelope (live repro: dva/
     );
   });
 });
+
+describe("parseDevinToolRequest — missing-colon JSON recovery", () => {
+  const tools = [
+    {
+      name: "Read",
+      description: "read",
+      input_schema: { type: "object", properties: { file_path: { type: "string" } } },
+    },
+  ];
+
+  it("repairs a string key missing its colon (live repro: position 62 error)", () => {
+    const tool = parseDevinToolRequest(
+      '<tool>{"name" "Read","arguments" {"file_path":"src/x.ts"}}</tool>',
+      tools
+    );
+    assert.equal(tool?.name, "Read");
+    assert.deepEqual(tool?.input, { file_path: "src/x.ts" });
+  });
+
+  it("still throws for paired envelopes with garbage bodies (pre-existing strictness)", () => {
+    assert.throws(
+      () => parseDevinToolRequest("<tool>not json at all</tool>", tools),
+      /not valid JSON/
+    );
+  });
+});
