@@ -119,7 +119,30 @@ function recoverEnvelopeJson(raw: string): JsonRecord | null {
 
 export function parseDevinToolRequest(text: string, tools: AnthropicTool[], idSeed = "") {
   const matches = [...text.matchAll(/<tool>\s*([\s\S]*?)\s*<\/tool>/g)];
-  if (matches.length === 0) return null;
+  if (matches.length === 0) {
+    // Tolerant: an UNCLOSED trailing envelope (model truncated before the
+    // closing tag) is still a usable tool request — EOF implies closure.
+    // Live repro: dva/gpt-5-6-luna-medium emitted
+    // `<tool>{"name":"read","arguments":{...}}` with no `</tool>` three turns
+    // in a row; fail-open shipped it as plain text and the client session
+    // stalled. If the remainder does not parse as an envelope, keep returning
+    // null so the narrative guards and fail-open path still apply.
+    const trailing = /<tool>\s*([\s\S]*?)\s*$/.exec(text);
+    if (trailing === null) return null;
+    let payload: ReturnType<typeof asRecord> | null = null;
+    try {
+      payload = asRecord(JSON.parse(trailing[1] || "{}"));
+    } catch {
+      payload = recoverEnvelopeJson(trailing[1] || "");
+    }
+    if (payload === null) return null;
+    return finalizeDevinToolRequest(
+      payload,
+      text.replace(trailing[0], "").trim() || undefined,
+      tools,
+      idSeed
+    );
+  }
   if (matches.length > 1) {
     throw new DevinAgenticBridgeError(
       "Devin response contained more than one tool request; parallel tool use is not supported",
@@ -134,7 +157,9 @@ export function parseDevinToolRequest(text: string, tools: AnthropicTool[], idSe
   // narrated envelope → 400 killed the whole client session (live repro:
   // rsbridge agent, dva/*). Strictness is only kept for MULTIPLE envelopes.
   const narrative =
-    text.trim() !== matches[0][0].trim() ? text.replace(matches[0][0], "").trim() : undefined;
+    text.trim() !== matches[0][0].trim()
+      ? text.replace(matches[0][0], "").trim()
+      : undefined;
 
   let payload: JsonRecord;
   try {
@@ -157,6 +182,15 @@ export function parseDevinToolRequest(text: string, tools: AnthropicTool[], idSe
     payload = recovered;
   }
 
+  return finalizeDevinToolRequest(payload, narrative, tools, idSeed);
+}
+
+function finalizeDevinToolRequest(
+  payload: JsonRecord,
+  narrative: string | undefined,
+  tools: AnthropicTool[],
+  idSeed: string
+) {
   const name = typeof payload.name === "string" ? payload.name.trim() : "";
   if (!name)
     throw new DevinAgenticBridgeError("Devin tool request is missing name", "missing_tool_name");
