@@ -89,3 +89,33 @@ describe("isExecutionTraceEcho guard (via executor repair path)", () => {
     assert.equal(echo('<tool>{"name":"bash","arguments":{"command":"ls"}}</tool>'), false);
   });
 });
+
+describe("parseDevinToolRequest — tolerant narrative extraction (mixed_tool_narrative)", () => {
+  const tools = [
+    {
+      name: "bash",
+      description: "run",
+      input_schema: { type: "object", properties: { command: { type: "string" } } },
+    },
+  ];
+  it("extracts a single envelope wrapped in prose and carries the narrative", () => {
+    const tool = parseDevinToolRequest(
+      'Let me search the routes first.\n<tool>{"name":"bash","arguments":{"command":"grep -r routes web/src"}}</tool>\nThat should find them.',
+      tools
+    );
+    assert.equal(tool?.name, "bash");
+    assert.deepEqual(tool?.input, { command: "grep -r routes web/src" });
+    assert.match(tool?.narrative || "", /Let me search the routes first/);
+    assert.match(tool?.narrative || "", /That should find them/);
+  });
+  it("still throws on multiple envelopes", () => {
+    assert.throws(
+      () =>
+        parseDevinToolRequest(
+          '<tool>{"name":"bash","arguments":{"command":"a"}}</tool> and <tool>{"name":"bash","arguments":{"command":"b"}}</tool>',
+          tools
+        ),
+      /more than one tool request/
+    );
+  });
+});

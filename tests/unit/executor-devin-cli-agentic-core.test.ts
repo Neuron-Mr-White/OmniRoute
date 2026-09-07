@@ -146,15 +146,15 @@ test("devin agentic parser leaves narrative text as text, not a tool", () => {
   assert.equal(parseDevinToolRequest("I read the file and it passes.", [readTool]), null);
 });
 
-test("devin agentic parser rejects mixed narrative and tool action", () => {
-  assert.throws(
-    () =>
-      parseDevinToolRequest(
-        'I will read it. <tool>{"name":"Read","arguments":{"file_path":"a.ts"}}</tool>',
-        [readTool]
-      ),
-    /standalone tool envelope/
+test("devin agentic parser tolerantly extracts a single envelope from narrative", () => {
+  const tool = parseDevinToolRequest(
+    'I will read it first. <tool>{"name":"Read","arguments":{"file_path":"a.ts"}}</tool> then continue.',
+    [readTool]
   );
+  assert.equal(tool?.name, "Read");
+  assert.equal(tool?.input.file_path, "a.ts");
+  assert.match(tool?.narrative || "", /I will read it first\./);
+  assert.match(tool?.narrative || "", /then continue\./);
 });
 
 test("devin agentic SSE renders Anthropic tool lifecycle", () => {

@@ -32,6 +32,9 @@ export function buildClaudeToolUseResponse(args: ClaudeToolUseArgs): JsonRecord 
     role: "assistant",
     model: args.model,
     content: [
+      // Narrative the model wrapped around the envelope is preserved as a
+      // leading text block (tolerant mixed_tool_narrative extraction).
+      ...(args.tool.narrative ? [{ type: "text", text: args.tool.narrative }] : []),
       {
         type: "tool_use",
         id: args.tool.id,

@@ -17,6 +17,8 @@ export type ParsedToolRequest = {
   id: string;
   name: string;
   input: JsonRecord;
+  /** Prose the model wrapped around the envelope (tolerant extraction). */
+  narrative?: string;
 };
 
 export type ClaudeResponseArgs = {

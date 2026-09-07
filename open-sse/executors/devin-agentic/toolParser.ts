@@ -127,12 +127,14 @@ export function parseDevinToolRequest(text: string, tools: AnthropicTool[], idSe
     );
   }
 
-  if (text.trim() !== matches[0][0].trim()) {
-    throw new DevinAgenticBridgeError(
-      "Devin tool request must be a standalone tool envelope without narrative text",
-      "mixed_tool_narrative"
-    );
-  }
+  // Tolerant: exactly one envelope embedded in narrative prose is still a
+  // usable tool request — extract the envelope and carry the surrounding
+  // prose as a text block (Anthropic allows text + tool_use in one message).
+  // Previously this threw mixed_tool_narrative → one repair → often another
+  // narrated envelope → 400 killed the whole client session (live repro:
+  // rsbridge agent, dva/*). Strictness is only kept for MULTIPLE envelopes.
+  const narrative =
+    text.trim() !== matches[0][0].trim() ? text.replace(matches[0][0], "").trim() : undefined;
 
   let payload: JsonRecord;
   try {
@@ -178,5 +180,5 @@ export function parseDevinToolRequest(text: string, tools: AnthropicTool[], idSe
     .update(`${idSeed}:${name}:${stableJson(input)}`)
     .digest("hex")
     .slice(0, 16);
-  return { id: `tool_devin_${digest}`, name, input };
+  return { id: `tool_devin_${digest}`, name, input, ...(narrative ? { narrative } : {}) };
 }
