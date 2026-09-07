@@ -35,7 +35,27 @@ const REPAIRABLE_TOOL_ERRORS = new Set([
   "multiple_tool_requests",
   "mixed_tool_narrative",
   "unexecuted_tool_intent",
+  "trace_format_echo",
 ]);
+
+/**
+ * True when the model reproduced the execution-trace format instead of
+ * answering: emitting the bridge's own markers (`[Assistant Tool Use]`,
+ * `[Tool Result]`, `id: tool_...`, `tool_use_id:`) as plain text. Frontier
+ * models occasionally continue "writing the transcript" — inventing tool ids
+ * and results — instead of emitting one <tool> envelope. Treat as repairable:
+ * the fabricated trace must never reach the client as a final answer.
+ */
+function isExecutionTraceEcho(text: string): boolean {
+  if (!text.includes("<tool>")) {
+    if (/\[Assistant Tool Use\]/.test(text)) return true;
+    if (/\[Tool Result\]/.test(text) && /tool_use_id:/.test(text)) return true;
+    if (/^id: tool_[a-z0-9_]+$/m.test(text.trim()) && /^name: [a-z0-9_-]+$/m.test(text.trim())) {
+      return true;
+    }
+  }
+  return false;
+}
 
 function describesUnexecutedToolIntent(text: string): boolean {
   const action = "(?:read|inspect|examine|edit|fix|run|check|test|start)";
@@ -527,6 +547,12 @@ export class DevinCliAgenticExecutor extends BaseExecutor {
           throw new DevinAgenticBridgeError(
             "The response described a future action without performing it; call exactly one tool now",
             "unexecuted_tool_intent"
+          );
+        }
+        if (prompt.tools.length > 0 && isExecutionTraceEcho(text)) {
+          throw new DevinAgenticBridgeError(
+            "The response reproduced the execution-trace format (fabricated tool turns) instead of answering; never write transcript fragments",
+            "trace_format_echo"
           );
         }
         tool = parseDevinToolRequest(text, prompt.tools, prompt.idSeed);

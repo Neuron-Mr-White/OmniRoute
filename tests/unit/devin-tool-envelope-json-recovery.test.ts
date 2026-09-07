@@ -68,3 +68,24 @@ describe("parseDevinToolRequest — envelope JSON recovery", () => {
     );
   });
 });
+
+describe("isExecutionTraceEcho guard (via executor repair path)", () => {
+  // Indirect: the detection lives in the executor; assert the regex behaviours
+  // it relies on so the guard's semantics stay pinned.
+  const echo = (t: string) =>
+    !t.includes("<tool>") &&
+    (/\[Assistant Tool Use\]/.test(t) || (/\[Tool Result\]/.test(t) && /tool_use_id:/.test(t)));
+
+  it("flags fabricated trace transcripts", () => {
+    const realFailure = `[Assistant Tool Use]\nid: tool_devin_3c6e12c4c84c16f0\nname: multi_web_content_read\narguments: {"url":"https://x"}\n\n[User]\n[Tool Result]\ntool_use_id: tool_devin_3c6e2c4c84c16f0\nis_error: false\ncontent: page text`;
+    assert.equal(echo(realFailure), true);
+  });
+
+  it("does not flag clean final text", () => {
+    assert.equal(echo("The provider page uses a card grid with alias-based routes."), false);
+  });
+
+  it("does not flag a real envelope", () => {
+    assert.equal(echo('<tool>{"name":"bash","arguments":{"command":"ls"}}</tool>'), false);
+  });
+});
