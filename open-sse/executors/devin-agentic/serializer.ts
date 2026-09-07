@@ -61,7 +61,15 @@ function serializeBlock(
         id ? "duplicate_tool_use_id" : "missing_tool_use_id"
       );
     }
-    const declared = tools.find((tool) => tool.name === name);
+    // Exact match first; fall back to case-insensitive matching so a client
+    // echoing back a differently-cased name for the same tool (e.g. a router
+    // layer handing a Claude Code canonical "Bash" to a client that declared
+    // "bash") is normalized instead of hard-failing the whole turn with
+    // undeclared_historical_tool (#12721). The declared casing is rendered so
+    // the downstream Devin prompt always shows the catalog name verbatim.
+    const declared =
+      tools.find((tool) => tool.name === name) ??
+      tools.find((tool) => tool.name.toLowerCase() === name.toLowerCase() && name !== "");
     if (!declared) {
       throw new DevinAgenticBridgeError(
         `Historical tool_use references undeclared tool: ${name || "unknown"}`,
@@ -72,7 +80,7 @@ function serializeBlock(
     return [
       "[Assistant Tool Use]",
       `id: ${id}`,
-      `name: ${name}`,
+      `name: ${declared.name}`,
       "arguments:",
       JSON.stringify(record.input || {}, null, 2),
     ].join("\n");
@@ -161,6 +169,12 @@ function serializeToolCatalog(tools: AnthropicTool[]): string[] {
       "Use only the tools listed below. Do not claim that a tool was executed.",
       "Do not execute tools inside Devin or emit ACP tool-call events; request them only with the XML envelope.",
       "Never describe a future tool action in plain text; emit the tool envelope instead.",
+      // Live lesson (dva): the inner agent sometimes reaches for its NATIVE
+      // harness tools (e.g. run_subagent) instead of the client's catalog.
+      // The catalog is CLOSED — make that impossible to misread.
+      "The tool catalog below is exhaustive and closed: if a tool is not listed, it does not exist for this session.",
+      "Never request your own native/environment tools (such as run_subagent, ask_user, or agent spawners) — they are unavailable here.",
+      "If no listed tool fits, answer in plain final text instead of inventing a tool name.",
     ].join("\n"),
     ...tools.map((tool) =>
       [

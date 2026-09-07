@@ -579,6 +579,15 @@ export class DevinCliAgenticExecutor extends BaseExecutor {
           throw error;
         }
         const requiresToolOnRepair = error.code === "unexecuted_tool_intent";
+        // Live lesson (dva): unknown_tool repairs fail when the model repeats
+        // its native-harness tool (run_subagent etc.) — enumerate the closed
+        // catalog so the second attempt picks a real tool.
+        const unknownToolCatalog =
+          error.code === "unknown_tool" && prompt.tools.length > 0
+            ? `The ONLY tools that exist for this session are: ${prompt.tools
+                .map((candidate) => candidate.name)
+                .join(", ")}. Never request tools outside this list (run_subagent and other native tools do not exist here).`
+            : "";
         const repairPrompt = [
           prompt.text,
           "",
@@ -586,11 +595,14 @@ export class DevinCliAgenticExecutor extends BaseExecutor {
           "",
           "[Single Repair Attempt]",
           `The previous output was rejected: ${sanitizeErrorMessage(error.message)}`,
+          unknownToolCatalog,
           requiresToolOnRepair
             ? "Plain text is not accepted for this repair. Return exactly one standalone <tool> JSON envelope now."
             : "Return either plain final text or exactly one standalone <tool> JSON envelope.",
           "Do not narrate a tool action.",
-        ].join("\n");
+        ]
+          .filter((line) => line !== "")
+          .join("\n");
         text = await generateAgenticOutput(turnArgs, repairPrompt);
         tool = parseDevinToolRequest(text, prompt.tools, prompt.idSeed);
         if (requiresToolOnRepair && !tool) {
