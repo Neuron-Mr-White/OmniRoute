@@ -34,12 +34,20 @@ export type CodexClientIdentity = {
   turnId: string;
   windowId: string;
   turnStartedAtUnixMs: number;
+  /**
+   * True when the inbound request already carried a Codex client identity
+   * header. Only then may the session-scoped carriers be converged/rewritten;
+   * synthesizing them for a client that presented none makes the request look
+   * unlike any real Codex client (see mergeTurnMetadata).
+   */
+  clientPresentedIdentity: boolean;
 };
 
 type CodexIdentityOptions = {
   mode?: CodexFingerprintMode;
   accountKey?: string | null;
   isOAuth?: boolean;
+  clientPresentedIdentity?: boolean;
 };
 
 function normalizeUuid(value: unknown): string | null {
@@ -280,6 +288,7 @@ export function createCodexClientIdentity(
   if (mode === "off") return null;
 
   const installationId = getCodexInstallationId(providerSpecificData, options.accountKey);
+  const clientPresentedIdentity = options.clientPresentedIdentity ?? true;
   if (mode === "device") {
     return {
       mode,
@@ -289,6 +298,7 @@ export function createCodexClientIdentity(
       turnId: "",
       windowId: "",
       turnStartedAtUnixMs: Date.now(),
+      clientPresentedIdentity,
     };
   }
 
@@ -307,6 +317,7 @@ export function createCodexClientIdentity(
     turnId: randomUUID(),
     windowId: `${threadId}:0`,
     turnStartedAtUnixMs: Date.now(),
+    clientPresentedIdentity,
   };
 }
 
@@ -376,7 +387,38 @@ export function resolveCodexFingerprintIdentity(input: {
     {
       accountKey: credentials.connectionId ?? null,
       isOAuth,
+      clientPresentedIdentity:
+        hasCodexIdentityHeaders(input.clientHeaders) || getClientBodySessionId(input.body) !== null,
     }
+  );
+}
+
+/**
+ * True when the inbound request already carries a Codex client identity header.
+ * A genuine Codex client always presents at least one; generic OpenAI-compatible
+ * clients do not. Used to gate session-scoped identity convergence so OmniRoute
+ * never fabricates a session envelope a real client would not produce.
+ */
+export function hasCodexIdentityHeaders(
+  headers?: Headers | Record<string, unknown> | null
+): boolean {
+  return CODEX_IDENTITY_HEADER_NAMES.some((name) => readNamedHeader(headers, name) !== "");
+}
+
+/**
+ * A client may present its Codex session through the request BODY
+ * (`prompt_cache_key` / `session_id` / `conversation_id`) without sending any
+ * identity header. That still counts as a presented identity, so convergence
+ * keeps headers and body metadata consistent.
+ */
+function getClientBodySessionId(body: unknown): string | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const record = body as Record<string, unknown>;
+  return (
+    normalizeCodexSessionId(record.prompt_cache_key) ||
+    normalizeCodexSessionId(record.session_id) ||
+    normalizeCodexSessionId(record.conversation_id) ||
+    null
   );
 }
 
@@ -410,24 +452,23 @@ function mergeTurnMetadata(
   includeSessionFields: boolean
 ): string {
   let metadata: Record<string, unknown> = {};
-  let hadExisting = false;
   if (typeof raw === "string" && raw.trim()) {
     try {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
         metadata = parsed as Record<string, unknown>;
-        hadExisting = true;
       }
     } catch {
       // Keep non-JSON metadata only when we do not need a complete carrier.
     }
   }
 
-  if (!hadExisting && includeSessionFields) {
-    metadata.thread_source = "user";
-    metadata.sandbox = "none";
-  }
-
+  // Never FABRICATE envelope fields. The old code injected
+  // `thread_source:"user"` + `sandbox:"none"` whenever the client sent no turn
+  // metadata; no real Codex client emits that shape, and the ChatGPT backend
+  // rejects tool-bearing turns on the newest models with "blocked by our safety
+  // systems. Reason: Potentially unintended activity." Callers therefore only
+  // converge identity the client actually presented (clientPresentedIdentity).
   metadata.installation_id = identity.installationId;
   if (includeSessionFields) {
     metadata.session_id = identity.sessionId;
@@ -457,7 +498,14 @@ export function applyCodexClientIdentityHeaders(
   if (!identity) return;
 
   headers["x-codex-installation-id"] = identity.installationId;
-  if (identity.mode === "device") {
+
+  // Converge the session-scoped carriers ONLY for requests that already carry a
+  // Codex client identity. Synthesizing a session/thread/turn envelope for a
+  // client that never presented one (OpenAI-compatible SDKs, non-Codex
+  // harnesses) makes the request look unlike any real Codex client, and the
+  // ChatGPT backend rejects tool-bearing turns on the newest models with
+  // "Potentially unintended activity". Device-level identity above still applies.
+  if (identity.mode === "device" || !identity.clientPresentedIdentity) {
     if (headers["x-codex-turn-metadata"] !== undefined) {
       headers["x-codex-turn-metadata"] = mergeTurnMetadata(
         headers["x-codex-turn-metadata"],
@@ -494,7 +542,10 @@ export function applyCodexClientMetadata(
       : {};
   existing["x-codex-installation-id"] = identity.installationId;
 
-  if (identity.mode !== "device") {
+  // Same rule as applyCodexClientIdentityHeaders: converge the session-scoped
+  // identity only when the client presented one.
+  const convergeSession = identity.mode !== "device" && identity.clientPresentedIdentity;
+  if (convergeSession) {
     existing.session_id = identity.sessionId;
     existing.thread_id = identity.threadId || identity.sessionId;
     existing.turn_id = identity.turnId;
@@ -505,7 +556,7 @@ export function applyCodexClientMetadata(
     existing["x-codex-turn-metadata"] = mergeTurnMetadata(
       existing["x-codex-turn-metadata"],
       identity,
-      identity.mode !== "device"
+      convergeSession
     );
   }
 
