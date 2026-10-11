@@ -16,6 +16,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { getUsageForProvider } from "../../open-sse/services/usage.ts";
 import { USAGE_FETCHER_PROVIDERS } from "../../open-sse/services/usage/fetcherProviders.ts";
+import { USAGE_SUPPORTED_PROVIDERS } from "../../open-sse/services/usage/supportedProviders.ts";
+import { isSupportedUsageConnection } from "../../src/lib/usage/providerLimits.ts";
 import {
   getStepfunUsage,
   resolveStepfunAccountsUrl,
@@ -30,6 +32,14 @@ test.afterEach(() => {
 
 test("stepfun is registered as a usage-fetcher provider", () => {
   assert.ok((USAGE_FETCHER_PROVIDERS as readonly string[]).includes("stepfun"));
+  assert.ok(USAGE_SUPPORTED_PROVIDERS.includes("stepfun"));
+});
+
+test("stepfun apikey connections pass the Provider Limits gate", () => {
+  assert.equal(
+    isSupportedUsageConnection({ id: "c1", provider: "stepfun", authType: "apikey" }),
+    true
+  );
 });
 
 test("resolveStepfunAccountsUrl normalizes base-url overrides", () => {
