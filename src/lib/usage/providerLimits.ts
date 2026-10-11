@@ -60,6 +60,7 @@ const PROVIDER_LIMITS_APIKEY_PROVIDERS = new Set([
   "crof",
   "nanogpt",
   "deepseek",
+  "stepfun",
   "xiaomi-mimo",
   "vertex",
   "vertex-partner",
