@@ -18,6 +18,7 @@ const { clearGeminiThoughtSignatures } =
   await import("../../open-sse/services/geminiThoughtSignatureStore.ts");
 
 type UnknownRecord = Record<string, unknown>;
+type GeminiTools = NonNullable<ReturnType<typeof openaiToGeminiRequest>["tools"]>;
 type GeminiRequestWithConfig = { generationConfig: UnknownRecord };
 type GeminiRequestWithSystem = { systemInstruction: { role?: unknown; parts?: unknown } };
 
@@ -1269,14 +1270,14 @@ test("OpenAI -> Gemini keeps function-declared google_search callable when mixed
       ],
     },
     false
-  ) as any;
+  );
 
   assert.ok(Array.isArray(result.tools), "expected tools array");
   assert.ok(
-    !result.tools.some((t: any) => t.googleSearch),
+    !result.tools.some((t) => t.googleSearch),
     "native googleSearch must not be mixed with functionDeclarations (upstream 400)"
   );
-  const decls = result.tools.find((t: any) => Array.isArray(t.functionDeclarations))
+  const decls = result.tools.find((t) => Array.isArray(t.functionDeclarations))
     ?.functionDeclarations as { name: string }[];
   assert.ok(decls, "expected functionDeclarations");
   assert.deepEqual(
@@ -1308,14 +1309,14 @@ test("OpenAI -> Cloud Code Gemini keeps mixed google_search declaration without 
       ],
     },
     false
-  ) as any;
+  );
 
   assert.ok(Array.isArray(result.tools), "expected tools array");
   assert.ok(
-    !result.tools.some((t: any) => t.googleSearch),
+    !result.tools.some((t) => t.googleSearch),
     "native googleSearch must not be present in the mixed-tools request"
   );
-  const decls = result.tools.find((t: any) => Array.isArray(t.functionDeclarations))
+  const decls = result.tools.find((t) => Array.isArray(t.functionDeclarations))
     ?.functionDeclarations as { name: string }[];
   assert.ok(decls, "expected functionDeclarations");
   assert.deepEqual(
@@ -1342,8 +1343,8 @@ test("OpenAI -> Antigravity promotes sole google_search tool to native grounding
       ],
     },
     false,
-    { projectId: "proj-search" } as any
-  ) as any;
+    { projectId: "proj-search" }
+  );
 
   assert.deepEqual(result.request?.tools, [{ googleSearch: {} }]);
 });
@@ -1371,13 +1372,14 @@ test("OpenAI -> Antigravity envelope keeps mixed declarations and strips none", 
       ],
     },
     false,
-    { projectId: "proj-search" } as any
-  ) as any;
+    { projectId: "proj-search" }
+  );
 
-  const tools = result.request?.tools ?? [];
-  assert.ok(!tools.some((t: any) => t.googleSearch), "no native grounding in mixed case");
-  const decls = tools.find((t: any) => Array.isArray(t.functionDeclarations))
-    ?.functionDeclarations as { name: string }[];
+  const tools = (result.request?.tools ?? []) as GeminiTools;
+  assert.ok(!tools.some((t) => t.googleSearch), "no native grounding in mixed case");
+  const decls = tools.find((t) => Array.isArray(t.functionDeclarations))?.functionDeclarations as {
+    name: string;
+  }[];
   assert.deepEqual(
     (decls ?? []).map((fn) => fn.name).sort(),
     ["google_search", "weather"],
