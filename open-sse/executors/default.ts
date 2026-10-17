@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { BaseExecutor, type ExecuteInput } from "./base.ts";
 import { mapNvidiaGlm52ReasoningParams } from "./base/reasoningEffort.ts";
+import { mapBasetenReasoningParams } from "./base/basetenReasoning.ts";
 import { PROVIDERS, OAUTH_ENDPOINTS } from "../config/constants.ts";
 import { getAccessToken } from "../services/tokenRefresh.ts";
 
@@ -676,6 +677,10 @@ export class DefaultExecutor extends BaseExecutor {
 
     headers["Accept"] = stream ? "text/event-stream" : "application/json";
 
+    // Client attribution first; operator custom headers below still win.
+    if (clientHeaders) {
+      forwardOpencodeClientHeaders(headers, clientHeaders, { forwardUserAgent: false });
+    }
     const isCompatibleProvider =
       this.provider?.startsWith?.("openai-compatible-") ||
       this.provider?.startsWith?.("anthropic-compatible-");
@@ -684,11 +689,7 @@ export class DefaultExecutor extends BaseExecutor {
       applyCustomHeaders(headers, credentials.providerSpecificData?.customHeaders);
     }
 
-    // Forward client request metadata headers (from OpenCode or similar clients)
-    // Allowlist-based: x-opencode-* headers only; the caller's User-Agent is NOT forwarded (#15632)
     if (clientHeaders) {
-      forwardOpencodeClientHeaders(headers, clientHeaders, { forwardUserAgent: false });
-
       // #3974: merge the client's negotiated anthropic-beta (allowlisted) into the
       // outbound set. The registry's static ANTHROPIC_BETA_CLAUDE_OAUTH lacks
       // tool-search-tool-2025-10-19, so deferred-tool requests were rejected with
@@ -747,8 +748,8 @@ export class DefaultExecutor extends BaseExecutor {
     const schemaJson = schema ? JSON.stringify(schema, null, 2) : null;
     const prompt =
       schemaJson !== null
-        ? `You must respond with valid JSON that strictly follows this JSON schema:\n\`\`\`json\n${schemaJson}\n\`\`\`\nRespond ONLY with the JSON object, no other text.`
-        : "You must respond with valid JSON only (a single JSON object), no other text.";
+        ? `You must respond with valid JSON that strictly follows this JSON schema:\n\`\`\`json\n${schemaJson}\n\`\`\`\nRespond ONLY with the JSON object, no other text and no markdown code fences.`
+        : "You must respond with valid JSON only (a single JSON object), no other text and no markdown code fences.";
 
     const messages: Array<Record<string, unknown>> = Array.isArray(record.messages)
       ? (record.messages as Array<Record<string, unknown>>).map((m) => ({ ...m }))
@@ -1001,6 +1002,7 @@ export class DefaultExecutor extends BaseExecutor {
       const bodyRecord = withDefaults as Record<string, unknown>;
       const outboundModel = typeof bodyRecord.model === "string" ? bodyRecord.model : model;
       withDefaults = mapNvidiaGlm52ReasoningParams(bodyRecord, this.provider, outboundModel);
+      withDefaults = mapBasetenReasoningParams(withDefaults, this.provider, outboundModel);
       stripUnsupportedParams(this.provider, outboundModel, withDefaults as Record<string, unknown>);
     }
 

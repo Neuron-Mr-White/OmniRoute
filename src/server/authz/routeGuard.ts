@@ -133,11 +133,15 @@ export const LOCAL_ONLY_API_PATTERNS: ReadonlyArray<RegExp> = [
   // S-01 (#15159): spawn(bin, ["acp", "--agent-type", "summarizer"], …) in
   // src/lib/providers/validation/webProvidersB.ts:535 — fixed binary list + fixed argv (not
   // caller-controlled RCE) but Hard Rules #15 + #17 still require loopback enforcement before
-  // any auth check. Exact paths only: the rest of /api/providers/ CRUD must stay
-  // remote-reachable. NOTE: keep this justification on its OWN line — a trailing `//` comment
-  // makes the pattern invisible to check-openapi-security-tiers.mjs, whose `//.*$` strip cannot
-  // match past a CRLF line ending.
-  /^\/api\/providers\/(validate|import|bulk)\/?$/,
+  // any auth check.
+  //
+  // S-01 (#15159): spawn-capable branch of /api/providers/{validate,import,bulk} is
+  // gated INSIDE each route (allowLocalSpawn from the trusted peer-locality header,
+  // #15766 shape), not by a path pattern — a blanket LOCAL_ONLY regex here locked
+  // remote/reverse-proxied dashboards (docker + nginx deployments) out of key
+  // validation for EVERY provider while only the devin CLI-key fallback can spawn.
+  // The routes must keep threading allowLocalSpawn; see
+  // tests/unit/authz/route-guard-providers-spawn-local-only.test.ts.
   // S-01 (#15159) second hop is deliberately NOT a path pattern: /api/providers/{id}/models
   // resolves `{id}` to an arbitrary CONNECTION id, and the spawn
   // (src/lib/providerModels/cursorAgent.ts:17, via fetchCursorAgentModels) only runs on the
@@ -307,14 +311,19 @@ export function isPrivateLanHost(hostHeader: string | null): boolean {
  * non-loopback clients when the request method is GET, HEAD, or OPTIONS.
  *
  * Rule: a path belongs here only when the read methods perform NO child-process
- * spawn and expose NO privileged mutation — only the write methods do.
+ * spawn for a non-local caller and expose NO privileged mutation — only the write
+ * methods do. A read handler that probes the host for loopback/LAN callers must
+ * gate that probe at its call site on `getRequestPeerLocality()`.
  *
  * Current exemptions:
  *   /api/system/version — GET reads package.json + npm registry; only POST
  *   triggers the auto-update flow (spawns git checkout + npm install + pm2).
  *   Hard Rules #15/#17 still apply to POST.
- *   /api/tunnels/cloudflared — GET reads tunnel status only; only POST
- *   spawns the cloudflared process (#11531).
+ *   /api/tunnels/cloudflared — GET reports tunnel status; only POST starts/stops
+ *   the cloudflared process (#11531). The status read resolves the binary with a
+ *   PATH lookup (`which cloudflared`), which runs only for loopback/LAN callers:
+ *   a remote caller gets the unprobed status (`probed: false`) with no spawn
+ *   (GHSA-35fw-cv32-2373 class, GHSA-jmq6-8j86-8xqj call-site gate).
  */
 export const LOCAL_ONLY_API_GET_EXEMPTIONS: ReadonlySet<string> = new Set([
   "/api/system/version",
