@@ -10,10 +10,11 @@
 // 0.123.1 and 0.124.1 (today's `@latest`) error 2/2.
 //
 // Two things made the nightly drift onto a broken release without anyone changing it:
-// the step pulled `promptfoo@latest` from the network, and the lockfile (which `npm ci`
-// already installs two steps earlier) floated on `^0.123.0`. Contract pinned here: the step
-// runs the lockfile's promptfoo (no network spec), the devDependency is an exact version,
-// the lockfile agrees with it, and that version is not one of the releases proven broken.
+// the step pulled `promptfoo@latest` from the network, and the devDependency floated on
+// `^0.123.0`. The lockfile install is not usable either (#17017: a nested js-yaml 4.3.2
+// breaks the in-repo promptfoo at import). Contract pinned here: the step runs an exact,
+// network-isolated `npx --yes promptfoo@X.Y.Z`, that version equals the exact devDependency
+// pin, the lockfile agrees with it, and it is not one of the releases proven broken.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
@@ -48,17 +49,19 @@ function guardStep(): Step {
   return step;
 }
 
-test("guard-validation runs the lockfile's promptfoo, never a network-resolved version", () => {
+test("guard-validation runs an exact, network-isolated promptfoo that mirrors the devDependency pin", () => {
   const run = guardStep().run!;
-  assert.doesNotMatch(
-    run,
-    /promptfoo@/,
-    "no `promptfoo@<spec>`: a network spec (`@latest`) is how the nightly drifted onto 0.124.1"
-  );
-  assert.match(
-    run,
-    /npx --no-install promptfoo eval/,
-    "`npx --no-install promptfoo` resolves node_modules/.bin from `npm ci` and fails loudly if absent"
+  // Not `@latest` (drifted onto 0.124.1) and not the lockfile binary (`npx --no-install`):
+  // #17017 — the lock nests js-yaml 4.3.2 under @apidevtools/json-schema-ref-parser, so the
+  // in-repo promptfoo throws at import (`binaryTag`). An exact `npx --yes promptfoo@X.Y.Z`
+  // installs its own dependency tree in the npx cache.
+  const match = run.match(/npx --yes promptfoo@(\d+\.\d+\.\d+) eval/);
+  assert.ok(match, `expected \`npx --yes promptfoo@<exact> eval\`, got: ${run}`);
+  assert.doesNotMatch(run, /promptfoo@latest|--no-install/);
+  assert.equal(
+    match![1],
+    pkg.devDependencies.promptfoo,
+    "the workflow pin must equal the package.json devDependency pin (single version to bump)"
   );
   assert.match(run, /-c promptfooconfig\.yaml/, "still evaluates the repo's promptfooconfig.yaml");
 });

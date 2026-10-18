@@ -381,6 +381,7 @@ async function handleChatCoreInner({
   videoBridgeLog = undefined,
   fallbackAttempts = undefined,
   forcedConnectionId = null, // #14116: caller's pinned/requested connection, vs credentials.connectionId below
+  allowedConnections = null, // routing allowlist; in-request account rotation must stay inside it
   previousResponseResumed = undefined, // rehydrated-continuation flag from chat.ts; noted below, no semantics.
 }) {
   delete (body as Record<string, unknown>)._omniroutePreviousResponseResumed;
@@ -3007,6 +3008,7 @@ async function handleChatCoreInner({
     const streamingOutcome = await runStreamingResponse({
       reportSignatureFailure,
       apiKeyInfo,
+      allowedConnections,
       persistAttemptLogs,
       buildUpstreamHeadersForExecute,
       resolveEffectiveServiceTier,
@@ -3084,6 +3086,7 @@ async function handleChatCoreInner({
     const nonStreamingOutcome = await runNonStreamingResponse({
       reportSignatureFailure,
       apiKeyInfo,
+      allowedConnections,
       appendRequestLog,
       applyProviderFailureClassification,
       assertManagedLeaseFence,

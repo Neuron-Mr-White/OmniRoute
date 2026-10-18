@@ -50,6 +50,7 @@ import {
   runWithOnPersist,
   getRefreshLeadMs,
   isUnrecoverableRefreshError,
+  NO_REFRESH_NEEDED,
 } from "../services/tokenRefresh.ts";
 import type { ProviderRequestDefaults } from "../services/providerRequestDefaults.ts";
 import { signRequestBody } from "../services/claudeCodeCCH.ts";
@@ -766,7 +767,10 @@ export class BaseExecutor {
           this.refreshCredentials(credentials, log || null)
         );
 
-        if (refreshed && !proactivePersistRan) {
+        // API-key connections (no refresh token) answer with the shared
+        // NO_REFRESH_NEEDED sentinel: nothing was attempted, so there is
+        // nothing to classify, spread or warn about — keep the credentials.
+        if (refreshed && refreshed !== NO_REFRESH_NEEDED && !proactivePersistRan) {
           // ─────────────────────────────────────────────────────────────────────
           // ⚠️ SOURCE OF TRUTH — do not flip the proactive path back to
           //    "persist expired+inactive". Ask the operator first.
