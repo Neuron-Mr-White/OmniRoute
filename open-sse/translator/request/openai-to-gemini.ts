@@ -202,12 +202,21 @@ function extractExplicitThinkingLevel(body: Record<string, unknown>): string | n
   return null;
 }
 
+type GeminiBaseOptions = {
+  // Antigravity/Cloud Code only (#16567): keep a function-declared google_search
+  // callable instead of promoting it to native grounding when other callable
+  // functions are declared. Plain Gemini (AI Studio / Gemini CLI) keeps the
+  // historical promotion, so it stays off unless the Cloud Code caller sets it.
+  keepMixedGoogleSearchCallable?: boolean;
+};
+
 // Core: Convert OpenAI request to Gemini format (base for all variants)
 function openaiToGeminiBase(
   model: string,
   body: Record<string, unknown>,
   stream: boolean,
-  toolNameOptions: GeminiToolNameOptions = {}
+  toolNameOptions: GeminiToolNameOptions = {},
+  baseOptions: GeminiBaseOptions = {}
 ) {
   const result: GeminiRequest = {
     model: model,
@@ -711,7 +720,8 @@ function openaiToGeminiBase(
     return t.type === "function" && (fn?.name === "google_search" || fn?.name === "googleSearch");
   });
 
-  // Antigravity's v1internal endpoint returns HTTP 400 when a native googleSearch
+  // Antigravity's v1internal endpoint (keepMixedGoogleSearchCallable, set only by
+  // the Cloud Code caller) returns HTTP 400 when a native googleSearch
   // tool is mixed with functionDeclarations in the same request. Promoting a
   // function-declared google_search to native grounding is therefore only safe
   // while it is the sole tool: as soon as the caller declares any other callable
@@ -720,14 +730,16 @@ function openaiToGeminiBase(
   // builtin names, and the client executes the search itself (live-verified:
   // functionDeclarations [google_search, weather] → 200; native {googleSearch:{}
   // } + functionDeclarations → 400).
-  const hasCallableFunctionTools = geminiTools?.some(
-    (t) =>
-      Array.isArray(t.functionDeclarations) &&
-      t.functionDeclarations.some((fn) => !GEMINI_BUILTIN_TOOL_NAMES.has(fn.name))
-  );
-  const hasNativeGroundingTool = geminiTools?.some(
-    (t) => (t as { googleSearch?: unknown }).googleSearch !== undefined
-  );
+  const hasCallableFunctionTools =
+    baseOptions.keepMixedGoogleSearchCallable === true &&
+    geminiTools?.some(
+      (t) =>
+        Array.isArray(t.functionDeclarations) &&
+        t.functionDeclarations.some((fn) => !GEMINI_BUILTIN_TOOL_NAMES.has(fn.name))
+    );
+  const hasNativeGroundingTool =
+    baseOptions.keepMixedGoogleSearchCallable === true &&
+    geminiTools?.some((t) => (t as { googleSearch?: unknown }).googleSearch !== undefined);
 
   type ToolEntry = NonNullable<GeminiRequest["tools"]>[number];
 
@@ -816,12 +828,18 @@ export function openaiToCloudCodeGeminiRequest(
     signaturelessToolCallMode?: "native" | "text" | "context";
   } = {}
 ) {
-  const request = openaiToGeminiBase(model, body, stream, {
-    stripNamespace: true,
-    signatureNamespace: options.signatureNamespace,
-    signaturelessToolCallMode: options.signaturelessToolCallMode,
-    supportsSignatureBypass: true,
-  });
+  const request = openaiToGeminiBase(
+    model,
+    body,
+    stream,
+    {
+      stripNamespace: true,
+      signatureNamespace: options.signatureNamespace,
+      signaturelessToolCallMode: options.signaturelessToolCallMode,
+      supportsSignatureBypass: true,
+    },
+    { keepMixedGoogleSearchCallable: true }
+  );
 
   // Standard Gemini requests retain the historical all-OFF defaults, but Cloud Code
   // must receive safety policy only when the caller explicitly supplied it.
@@ -917,7 +935,8 @@ function wrapInCloudCodeEnvelope(model, cloudCodeRequest, credentials = null) {
             return { ...tool, functionDeclarations: customDecls };
           })
           .filter(
-            (tool) => !Array.isArray(tool.functionDeclarations) || tool.functionDeclarations.length > 0
+            (tool) =>
+              !Array.isArray(tool.functionDeclarations) || tool.functionDeclarations.length > 0
           )
       : envelope.request.tools;
     envelope.request.tools = cleanedTools.length > 0 ? cleanedTools : undefined;

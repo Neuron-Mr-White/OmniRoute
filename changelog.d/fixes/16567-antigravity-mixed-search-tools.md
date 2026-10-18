@@ -1,1 +1,1 @@
-Keep client-declared `google_search` callable alongside other function tools in Gemini and Antigravity requests, while preserving native grounding for a sole search tool.
+Keep client-declared `google_search` callable alongside other function tools in Antigravity (Cloud Code) requests instead of promoting it to native grounding (which the v1internal endpoint rejects with HTTP 400), while preserving native grounding for a sole search tool. Plain Gemini (AI Studio / Gemini CLI) behavior is unchanged. (#16567)

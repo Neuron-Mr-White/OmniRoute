@@ -1236,12 +1236,11 @@ test("OpenAI -> Gemini request maps google_search tool", () => {
   );
 });
 
-// Regression: a function-declared google_search alongside OTHER function tools must
-// NOT be promoted to native grounding — Antigravity's v1internal endpoint rejects a
-// native googleSearch tool mixed with functionDeclarations with HTTP 400, which broke
-// every coding-agent request whose toolset happens to include a google_search function.
-// The declaration is kept as a plain callable instead (upstream accepts builtin NAMES).
-test("OpenAI -> Gemini keeps function-declared google_search callable when mixed with other tools", () => {
+// Scope guard (#16567): the mixed-tools rule is an Antigravity/Cloud Code fix. Plain
+// Gemini (AI Studio / Gemini CLI) must keep its historical behavior — a
+// function-declared google_search is still promoted to native grounding even when
+// other callable functions are declared.
+test("OpenAI -> Gemini (plain) still promotes google_search to native grounding when mixed with other tools", () => {
   const result = openaiToGeminiRequest(
     "gemini-2.0-flash",
     {
@@ -1274,17 +1273,13 @@ test("OpenAI -> Gemini keeps function-declared google_search callable when mixed
 
   assert.ok(Array.isArray(result.tools), "expected tools array");
   assert.ok(
-    !result.tools.some((t) => t.googleSearch),
-    "native googleSearch must not be mixed with functionDeclarations (upstream 400)"
+    result.tools.some((t) => t.googleSearch),
+    "plain Gemini keeps the native googleSearch promotion (behavior unchanged)"
   );
   const decls = result.tools.find((t) => Array.isArray(t.functionDeclarations))
     ?.functionDeclarations as { name: string }[];
   assert.ok(decls, "expected functionDeclarations");
-  assert.deepEqual(
-    decls.map((fn) => fn.name).sort(),
-    ["google_search", "weather"],
-    "google_search declaration must stay callable alongside the other tools"
-  );
+  assert.deepEqual(decls.map((fn) => fn.name).sort(), ["google_search", "weather"]);
 });
 
 // Same regression through the base Cloud Code translator (no envelope): the mixed
