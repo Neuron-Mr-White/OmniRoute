@@ -563,11 +563,6 @@
       "count": 1
     }
   },
-  "open-sse/services/videoCombo.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "open-sse/transformer/responsesTransformer.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
@@ -1016,11 +1011,6 @@
   "src/app/api/providers/bulk-web-session/route.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    }
-  },
-  "src/app/api/relay/tokens/[id]/route.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 2
     }
   },
   "src/app/api/search/stats/route.ts": {

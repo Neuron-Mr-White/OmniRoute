@@ -147,6 +147,10 @@ All requests require a valid Bearer token or session cookie. Obtain a token via 
 - [`PUT /api/settings/task-routing`](references/endpoints.md#put-apisettingstask-routing)
 - [`GET /api/settings/tier-config`](references/endpoints.md#get-apisettingstier-config)
 - [`PUT /api/settings/tier-config`](references/endpoints.md#put-apisettingstier-config)
+- [`GET /api/settings/transfer/catalog`](references/endpoints.md#get-apisettingstransfercatalog)
+- [`POST /api/settings/transfer/export`](references/endpoints.md#post-apisettingstransferexport)
+- [`POST /api/settings/transfer/preview`](references/endpoints.md#post-apisettingstransferpreview)
+- [`POST /api/settings/transfer/import`](references/endpoints.md#post-apisettingstransferimport)
 ## Payloads
 
 See the full OpenAPI specification at `GET /api/openapi/spec` or `docs/openapi.yaml` for detailed request/response schemas.

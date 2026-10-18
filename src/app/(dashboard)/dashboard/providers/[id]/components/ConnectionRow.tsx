@@ -22,11 +22,13 @@ import { normalizeCodexLimitPolicy, providerText } from "../providerPageHelpers"
 import { getCodexPlanLabel } from "../codexPlanLabel";
 import CodexAccountDetails from "./CodexAccountDetails";
 import ConnectionQuotaPanel from "./ConnectionQuotaPanel";
+import ConnectionIdChip from "./ConnectionIdChip";
 import {
   isProviderQuotaVisible,
   supportsProviderQuota,
 } from "@/shared/utils/providerQuotaVisibility";
 import ProviderQuotaVisibilityToggle from "./ProviderQuotaVisibilityToggle";
+import CodexPingNowButton from "./CodexPingNowButton";
 
 // ---------------------------------------------------------------------------
 // Types (exported so the client can reference them without re-importing)
@@ -381,6 +383,7 @@ export default function ConnectionRow({
               </span>
             )}
             <span className="text-xs text-text-muted">#{connection.priority}</span>
+            <ConnectionIdChip connectionId={connection.id} />
             {connection.globalPriority && (
               <span className="text-xs text-text-muted">
                 {t("autoPriority", { priority: connection.globalPriority })}
@@ -667,6 +670,12 @@ export default function ConnectionRow({
           >
             {t("tokenShort")}
           </Button>
+        )}
+        {isCodex && isOAuth && connection.provider === "codex" && (
+          <CodexPingNowButton
+            connectionId={connection.id}
+            disabled={connection.isActive === false}
+          />
         )}
         {isCodex && onApplyCodexAuthLocal && (
           <Button

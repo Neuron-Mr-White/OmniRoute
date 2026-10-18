@@ -33,16 +33,32 @@
  *     justified edit of the baseline, never a way to make the gate green.
  * Without either flag the Markdown/JSON report is unchanged.
  *
+ * PR base-relative mode (`--ratchet --base-ref <sha>`, same idea as check:file-size #8522):
+ * the base receives ~10 merges/hour, and twice on 2026-10-16 merges landed between the seed
+ * and the merge of the ceiling (771 → 773 → 774, #16904) — every innocent PR went red in that
+ * window. With `--base-ref` the base commit is exported with `git archive` (src/ + open-sse/,
+ * the only trees the resolver reads; tsconfig is not consulted) into a temporary directory and
+ * measured with the same `measureBoundary`; the effective ceiling is
+ * `max(baseline ceiling, edges on the base)`, so the PR fails only when it ADDS edges. Base
+ * drift above the ceiling is reported, never blocking. If the base cannot be exported (unknown
+ * SHA, shallow checkout) the gate warns and falls back to the absolute ceiling — never a
+ * silent green. CI passes `--base-ref` on pull_request events only; push / workflow_dispatch
+ * keep the absolute ceiling.
+ *
  * Usage:
  *   node scripts/quality/measure-boundary.mjs --json [--root <dir>]
  *   node scripts/quality/measure-boundary.mjs --md   [--root <dir>]
  *   node scripts/quality/measure-boundary.mjs --ratchet [--root <dir>] [--baseline <file>]
+ *   node scripts/quality/measure-boundary.mjs --ratchet --base-ref <sha> [--root <dir>] [--baseline <file>]
  *   node scripts/quality/measure-boundary.mjs --update  [--root <dir>] [--baseline <file>]
  *
- * Only `node:fs` / `node:path` / `node:url`; no child processes, no shell.
+ * Only `node:fs` / `node:path` / `node:url` / `node:os`; the only child processes are `git`
+ * and `tar` for `--base-ref`, via `execFileSync` with argv arrays (no shell, Hard Rule #13).
  */
 
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -532,6 +548,90 @@ export function evaluateBoundaryRatchet(measured, ceiling) {
 }
 
 /**
+ * PR base-relative verdict (`--base-ref`): the effective ceiling is
+ * `max(ceiling, baseMeasured)`, so drift the PR inherited from its base never blocks it,
+ * while any edge the PR adds on top of the base still does. `warning` is set when the base
+ * itself is above the baseline ceiling (inherited drift — reported, not blocking).
+ *
+ * @param {number} measured edges on the PR head
+ * @param {number} baseMeasured edges on the PR base
+ * @param {number | null} ceiling baseline ceiling
+ * @returns {{ status: "ok" | "fail" | "advisory", exitCode: 0 | 1, message: string, warning?: string }}
+ */
+export function evaluateBoundaryRatchetRelative(measured, baseMeasured, ceiling) {
+  const numbers = `head ${measured}, base ${baseMeasured}, baseline ceiling ${ceiling ?? "(none)"}`;
+  if (ceiling === null || ceiling === undefined) {
+    return {
+      status: "advisory",
+      exitCode: 0,
+      message: `[boundary] RATCHET ADVISORY - no metrics.${BOUNDARY_METRIC_KEY} ceiling in quality-baseline.json; not enforced (${numbers}).`,
+    };
+  }
+  const effective = Math.max(ceiling, baseMeasured);
+  const drift = baseMeasured - ceiling;
+  const warning =
+    drift > 0
+      ? `[boundary] WARNING base drift herdado: ${drift} acima do teto — não é desta PR (the PR base already has ${baseMeasured} edges vs the baseline ceiling ${ceiling}; inherited, not blocking).`
+      : undefined;
+  if (measured > effective) {
+    return {
+      status: "fail",
+      exitCode: 1,
+      message: `[boundary] RATCHET FAIL - this PR adds open-sse → src edges (${numbers}; effective ceiling max(ceiling, base) = ${effective}). The engine must not gain new imports from src/: move the code into open-sse/ or inject it. Run \`npm run quality:boundary\` for the full edge list. Do not raise the ceiling to make this gate green.`,
+      ...(warning ? { warning } : {}),
+    };
+  }
+  return {
+    status: "ok",
+    exitCode: 0,
+    message: `[boundary] RATCHET OK - open-sse → src edges within max(baseline ceiling, PR base) (${numbers}; effective ceiling ${effective}).`,
+    ...(warning ? { warning } : {}),
+  };
+}
+
+/**
+ * Measure `openSseToSrc` at git ref `ref` of the repository at `root`, without touching its
+ * working tree or index: `git archive` exports src/ + open-sse/ of that commit into a
+ * temporary directory, which is measured with `measureBoundary` and removed afterwards.
+ * Throws when the ref cannot be resolved or exported (caller falls back to absolute mode).
+ *
+ * @param {string} root repository root (the measured tree)
+ * @param {string} ref commit-ish of the PR base
+ * @returns {{ sha: string, edges: number }}
+ */
+export function measureBoundaryAtRef(root, ref) {
+  if (typeof ref !== "string" || !/^[\w./^~@{}-]+$/.test(ref) || ref.startsWith("-")) {
+    throw new Error(`refusing suspicious ref ${JSON.stringify(ref)}`);
+  }
+  const git = (args) =>
+    execFileSync("git", args, {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 64 * 1024 * 1024,
+    }).trim();
+  const sha = git(["rev-parse", "--verify", "--quiet", "--end-of-options", `${ref}^{commit}`]);
+  if (!/^[0-9a-f]{40,64}$/.test(sha)) throw new Error(`cannot resolve ${ref} to a commit`);
+  const present = git(["ls-tree", "--name-only", sha, "--", ...SCANNED_ROOTS])
+    .split("\n")
+    .filter((name) => SCANNED_ROOTS.includes(name));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "measure-boundary-base-"));
+  try {
+    if (present.length > 0) {
+      const tarPath = path.join(tmp, "base.tar");
+      const tree = path.join(tmp, "tree");
+      fs.mkdirSync(tree);
+      git(["archive", "--format=tar", `--output=${tarPath}`, sha, "--", ...present]);
+      execFileSync("tar", ["-xf", tarPath, "-C", tree], { stdio: ["ignore", "pipe", "pipe"] });
+      return { sha, edges: measureBoundary({ root: tree }).edges.openSseToSrc };
+    }
+    return { sha, edges: 0 };
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+/**
  * Write `measured` as the new ceiling. Refuses to raise an existing ceiling (the ratchet
  * only goes down); a missing metric is seeded as a dedicated down-only gate. Every other
  * key of the baseline — including the metric's `_note` — is preserved.
@@ -566,6 +666,7 @@ function parseArgs(argv) {
     baseline: null,
     ratchet: false,
     update: false,
+    baseRef: null,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -577,10 +678,15 @@ function parseArgs(argv) {
     else if (arg.startsWith("--root=")) args.root = arg.slice("--root=".length);
     else if (arg === "--baseline") args.baseline = argv[++i];
     else if (arg.startsWith("--baseline=")) args.baseline = arg.slice("--baseline=".length);
-    else if (arg === "--help" || arg === "-h") args.help = true;
+    else if (arg === "--base-ref" || arg.startsWith("--base-ref=")) {
+      const value = arg === "--base-ref" ? argv[++i] : arg.slice("--base-ref=".length);
+      if (value === undefined || value === "") throw new Error("--base-ref needs a value");
+      args.baseRef = value;
+    } else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   if (args.ratchet && args.update) throw new Error("--ratchet and --update are exclusive");
+  if (args.baseRef !== null && !args.ratchet) throw new Error("--base-ref requires --ratchet");
   return args;
 }
 
@@ -614,7 +720,7 @@ function main() {
   }
   if (args.help) {
     console.log(
-      "Usage: node scripts/quality/measure-boundary.mjs [--json|--md] [--ratchet|--update] [--root <dir>] [--baseline <file>]"
+      "Usage: node scripts/quality/measure-boundary.mjs [--json|--md] [--ratchet [--base-ref <sha>]|--update] [--root <dir>] [--baseline <file>]"
     );
     return;
   }
@@ -624,10 +730,26 @@ function main() {
   if (args.update) process.exit(runUpdate(baselinePath, result.edges.openSseToSrc));
 
   if (args.ratchet) {
-    const verdict = evaluateBoundaryRatchet(
-      result.edges.openSseToSrc,
-      readBaselineBoundaryValue(baselinePath)
-    );
+    const ceiling = readBaselineBoundaryValue(baselinePath);
+    let verdict = null;
+    if (args.baseRef !== null) {
+      try {
+        const base = measureBoundaryAtRef(path.resolve(args.root), args.baseRef);
+        console.log(
+          `[boundary] PR mode (--base-ref ${base.sha.slice(0, 12)}): ${base.edges} open-sse → src edges on the base.`
+        );
+        verdict = evaluateBoundaryRatchetRelative(result.edges.openSseToSrc, base.edges, ceiling);
+      } catch (error) {
+        const reason = String(error?.stderr || error?.message || error)
+          .trim()
+          .split("\n")[0];
+        console.error(
+          `[boundary] WARNING --base-ref ${args.baseRef} could not be measured (${reason}); falling back to the absolute ceiling.`
+        );
+      }
+    }
+    verdict ??= evaluateBoundaryRatchet(result.edges.openSseToSrc, ceiling);
+    if (verdict.warning) console.error(verdict.warning);
     (verdict.status === "ok" ? console.log : console.error)(verdict.message);
     process.exit(verdict.exitCode);
   }

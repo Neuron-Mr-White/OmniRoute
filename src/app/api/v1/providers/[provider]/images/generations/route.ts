@@ -1,5 +1,5 @@
 import { handleImageGeneration } from "@omniroute/open-sse/handlers/imageGeneration.ts";
-import { errorResponse, unavailableResponse } from "@omniroute/open-sse/utils/error.ts";
+import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
 import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import {
   getProviderCredentialsWithQuotaPreflight,
@@ -8,7 +8,10 @@ import {
 import { getImageProvider, parseImageModel } from "@omniroute/open-sse/config/imageRegistry.ts";
 import * as log from "@/sse/utils/logger";
 import { toJsonErrorPayload } from "@/shared/utils/upstreamError";
-import { enforceApiKeyPolicy } from "@/shared/utils/apiKeyPolicy";
+import {
+  enforceApiKeyPolicyWithScope,
+  unusableCredentialsResponse,
+} from "@/app/api/v1/_shared/keyScopedRoute";
 import { v1ImageGenerationSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { enforceClientApiRouteAuth } from "@/shared/utils/clientApiRouteAuth";
@@ -63,9 +66,11 @@ export async function POST(request, { params }) {
   const authRejection = await enforceClientApiRouteAuth(request);
   if (authRejection) return authRejection;
 
-  // Enforce API key policies (model restrictions + budget limits)
-  const policy = await enforceApiKeyPolicy(request, body.model);
-  if (policy.rejection) return policy.rejection;
+  // Enforce API key policies (model restrictions + budget limits). GHSA-3w2r:
+  // credential selection stays inside the key's connection scope, as in chat.
+  const scope = await enforceApiKeyPolicyWithScope(request, body.model);
+  if (scope.rejection) return scope.rejection;
+  const { policy } = scope;
 
   // Validate provider match
   const modelProvider = body.model.split("/")[0];
@@ -90,7 +95,7 @@ export async function POST(request, { params }) {
   let credentials = await getProviderCredentialsWithQuotaPreflight(
     rawProvider,
     null,
-    null,
+    scope.allowedConnections,
     requestedModel
   );
   if (!credentials) {
@@ -99,19 +104,14 @@ export async function POST(request, { params }) {
       `No credentials for image provider: ${rawProvider}`
     );
   }
-  if (credentials.allRateLimited) {
-    return unavailableResponse(
-      HTTP_STATUS.RATE_LIMITED,
-      `[${rawProvider}] All accounts rate limited`,
-      credentials.retryAfter,
-      credentials.retryAfterHuman
-    );
-  }
+  const unusable = unusableCredentialsResponse(rawProvider, credentials);
+  if (unusable) return unusable;
 
   const execution = await executeImageWithCredentialFallback({
     provider: rawProvider,
     requestedModel,
     credentials,
+    allowedConnections: scope.allowedConnections,
     execute: (attemptCredentials) =>
       runImageRequestWithAccounting(
         {

@@ -33,6 +33,7 @@ import {
 } from "../utils/opencodeHeaders.ts";
 import { projectOpencodeSessionBody } from "../utils/opencodeSessionIdentity.ts";
 import { listForRequest, releaseRequestList } from "./opencodeAccountScope.ts";
+import { applyOpencodeToolNameLengthAliases } from "./toolNameLengthAlias.ts";
 import type { ScopedAccount, ScopedAccountHealth } from "./opencodeAccountScope.ts";
 import { guardRequiredAccountProxies } from "./opencodeRequiredProxy.ts";
 import {
@@ -191,7 +192,7 @@ export function parseEffortLevel(model: string): { baseModel: string; effort: st
 /**
  * Resolves the registry `targetFormat` for a model, aliasing `provider` first.
  *
- * `PROVIDER_MODELS` is keyed by the provider's public ALIAS (e.g. `"oc"`), not its
+ * `PROVIDER_MODELS` is keyed by the provider's public ALIAS (e.g. `"opencode-zen"`), not its
  * raw registry id (e.g. `"opencode"`) — mirrors `resolveChatCoreTargetFormat()`
  * (`handlers/chatCore/targetFormat.ts`), which already aliases before calling
  * `getModelTargetFormat()`. Calling it with the raw id here made every entry miss
@@ -1534,6 +1535,8 @@ export class OpencodeExecutor extends BaseExecutor {
     if (isThinkingMessageModel(model)) {
       modifiedBody = injectReasoningContentForThinkingModel(modifiedBody);
     }
+    const toolFormat = this._requestFormat ?? resolveOpencodeTargetFormat(this.provider, model);
+    applyOpencodeToolNameLengthAliases(this.provider, modifiedBody, toolFormat);
     return modifiedBody;
   }
 }

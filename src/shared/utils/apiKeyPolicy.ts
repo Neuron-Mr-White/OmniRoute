@@ -908,7 +908,7 @@ async function resolveSelfLoopScopedKey(
  * to a caller's key — that caller's key. On a scope rejection the presented key
  * is kept so the result still names what the client sent.
  */
-async function resolveEnforcedPolicyKey(
+export async function resolveEnforcedPolicyKey(
   request: Request
 ): Promise<{ apiKey: string | null; selfLoopScope: SelfLoopScope }> {
   const presentedKey = await resolvePolicyApiKey(request);

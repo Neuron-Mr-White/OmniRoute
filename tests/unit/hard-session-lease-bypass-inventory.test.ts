@@ -32,7 +32,10 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "open-sse/handlers/chatCore/emptyTurnRetryLoop.ts": 1,
     "open-sse/handlers/chatCore/providerExecutionPipeline.ts": 2,
     "open-sse/services/imageCombo.ts": 1,
-    "open-sse/services/speechCombo.ts": 1,
+    // GHSA-3w2r: keyless providers (local zero-config defaults, keyless
+    // remotes) look up an in-scope connection for a connection-scoped API key
+    // before running (chat's #9057 rule) — one extra scoped lookup per site.
+    "open-sse/services/speechCombo.ts": 2,
     "open-sse/services/videoCombo.ts": 2,
     "src/app/api/compression/compare/verify/route.ts": 1,
     "src/app/api/internal/codex-responses-ws/route.ts": 1,
@@ -42,10 +45,13 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/search/providers/route.ts": 3,
     "src/app/api/v1/_shared/elevenLabsProxy.ts": 1,
     "src/app/api/v1/_shared/fishAudioProxy.ts": 1,
-    "src/app/api/v1/audio/speech/route.ts": 1,
+    // GHSA-3w2r: keyless providers (local zero-config defaults, keyless
+    // remotes) look up an in-scope connection for a connection-scoped API key
+    // before running (chat's #9057 rule) — one extra scoped lookup per site.
+    "src/app/api/v1/audio/speech/route.ts": 2,
     "src/app/api/v1/_shared/videoModelResolution.ts": 1,
-    "src/app/api/v1/audio/transcriptions/route.ts": 2,
-    "src/app/api/v1/audio/translations/route.ts": 1,
+    "src/app/api/v1/audio/transcriptions/route.ts": 3,
+    "src/app/api/v1/audio/translations/route.ts": 2,
     "src/app/api/v1/classify/route.ts": 1,
     // v3.8.51 #11754: the second resolveImageRouteModel() call (a duplicate
     // of the retirement-check one hoisted before enforceApiKeyPolicy) was
@@ -61,7 +67,9 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/v1/images/upscale/route.ts": 1,
     "src/app/api/v1/messages/count_tokens/route.ts": 1,
     "src/app/api/v1/moderations/route.ts": 1,
-    "src/app/api/v1/music/generations/route.ts": 2,
+    // GHSA-3w2r: the local-override lookup now reuses the shared
+    // resolveLocalOverrideCredentials (_shared/videoModelResolution.ts), 2->1.
+    "src/app/api/v1/music/generations/route.ts": 1,
     "src/app/api/v1/ocr/route.ts": 1,
     "src/app/api/v1/providers/[provider]/embeddings/route.ts": 1,
     "src/app/api/v1/providers/[provider]/images/generations/route.ts": 1,
@@ -82,7 +90,10 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     // fenced the same way as the two pre-existing sites.
     // #15761: local embeddings resolve credentials through the serving-connection allowlist
     // (getProviderCredentials(provider, null, servingIds)) — one more site (3 -> 4).
-    "src/lib/embeddings/service.ts": 4,
+    // GHSA-3w2r: keyless providers (local zero-config defaults, keyless
+    // remotes) look up an in-scope connection for a connection-scoped API key
+    // before running (chat's #9057 rule) — one extra scoped lookup per site.
+    "src/lib/embeddings/service.ts": 5,
     "src/lib/images/adobeFireflyEdit.ts": 1,
     // PR #11390: second site is the generic derived-provider listing fallback —
     // read-only key presence probe used to decide whether a configured chat
@@ -262,6 +273,9 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     // read, not connection selection or dispatch, class C like its siblings (3 -> 4).
     "src/lib/tokenHealthCheck.ts": 4,
     "src/lib/tokenHealthCheckCopilot.ts": 1,
+    // Selective provider-account transfer: one read of every connection to build the
+    // catalog, the export selection and the import match set. Read-only state, no dispatch.
+    "src/lib/transfer/providerTransfer.ts": 1,
     "src/lib/usage/callLogs.ts": 1,
     "src/lib/usage/codexResetCredits.ts": 1,
     "src/lib/usage/comboScoringInspector.ts": 1,
@@ -436,6 +450,7 @@ test("managed request surfaces are fenced centrally or rejected before independe
     "src/lib/api/modelTestRunner.ts",
     "src/lib/modelValidation/runner.ts",
     "src/lib/services/quotaAutoPing.ts",
+    "src/lib/services/quotaAutoPingManual.ts",
     "src/lib/usage/codexResetCredits.ts",
     "src/lib/usage/glmResetCards.ts",
     "src/lib/usage/grokResetCredits.ts",

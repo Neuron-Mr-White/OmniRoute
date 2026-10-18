@@ -13,6 +13,8 @@ export const opencode_goProvider: RegistryEntry = {
   authHeader: "Authorization",
   authPrefix: "Bearer",
   defaultContextLength: 200000,
+  // Upstream 400s "name must be at most 64 characters" on chat-completions tools.
+  toolNameMaxLength: 64,
   // glm-5.3-flash and other always-thinking models need a generous output
   // budget or reasoning consumes every token before content is emitted.
   requestDefaults: { maxTokens: 16_384 },

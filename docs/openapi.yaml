@@ -1417,8 +1417,9 @@ paths:
                   default: 5
                 search_type:
                   type: string
-                  enum: [web, news, x]
+                  enum: [web, news, x, finance]
                   default: web
+                  description: "`finance` is supported by tavily-search only."
                 offset:
                   type: integer
                   minimum: 0
@@ -1455,6 +1456,11 @@ paths:
                 provider_options:
                   type: object
                   additionalProperties: true
+                  description: >-
+                    Provider-specific passthrough. Exa and Tavily read an allow-listed,
+                    type-checked bag under `exa` / `exa-search` and `tavily` / `tavily-search`;
+                    unknown keys and wrongly typed values are dropped. See
+                    docs/reference/API_REFERENCE.md (Search API).
                 strict_filters:
                   type: boolean
                   default: false
@@ -2069,9 +2075,71 @@ paths:
     get:
       tags: [Models]
       summary: List available models
-      description: Returns all models available across configured providers.
+      description: >-
+        Returns all models available across configured providers. The discovery
+        filters (`capability`, `min_context`, `kind`, `q`) are opt-in: without them
+        the response is unchanged. They narrow the caller's own (key-filtered)
+        catalog and run before `limit`/`after` paging.
       security:
         - BearerAuth: []
+      parameters:
+        - in: query
+          name: capability
+          required: false
+          description: >-
+            Keep models whose `capabilities.<name>` is `true`. Repeatable or
+            comma-separated; every listed capability must match.
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                [
+                  attachment,
+                  reasoning,
+                  structured_output,
+                  temperature,
+                  thinking,
+                  tool_calling,
+                  vision,
+                ]
+          style: form
+          explode: true
+        - in: query
+          name: min_context
+          required: false
+          description: Keep models whose `context_length` is at least this value.
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: kind
+          required: false
+          description: Catalog surface (`type`); models without a `type` are `chat`.
+          schema:
+            type: string
+            enum: [chat, audio, embedding, image, moderation, music, rerank, video]
+        - in: query
+          name: q
+          required: false
+          description: Case-insensitive substring match on the model `id` or `name`.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - in: query
+          name: limit
+          required: false
+          description: OpenAI-style page size (applied after the discovery filters).
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: after
+          required: false
+          description: OpenAI-style cursor — return models after this id.
+          schema:
+            type: string
       responses:
         "200":
           description: Model list
@@ -2087,6 +2155,97 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Model"
+        "400":
+          description: Invalid discovery filter value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/models/query:
+    post:
+      tags: [Models]
+      summary: Query a model shortlist
+      description: >-
+        Filtered shortlist over the same catalog as `GET /v1/models` (same auth and
+        per-key visibility). Results are ordered by `owned_by`, then `id`, and capped
+        by `limit` (default 20, maximum 100).
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                capabilities:
+                  description: Array or comma-separated string; every capability must be `true`.
+                  oneOf:
+                    - type: array
+                      items:
+                        type: string
+                        enum:
+                          [
+                            attachment,
+                            reasoning,
+                            structured_output,
+                            temperature,
+                            thinking,
+                            tool_calling,
+                            vision,
+                          ]
+                    - type: string
+                min_context:
+                  type: integer
+                  minimum: 0
+                max_output:
+                  type: integer
+                  minimum: 0
+                  description: Keep models whose `max_output_tokens` is at least this value.
+                kind:
+                  type: string
+                  enum: [chat, audio, embedding, image, moderation, music, rerank, video]
+                q:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                owned_by:
+                  type: string
+                exclude:
+                  description: Model ids to leave out (array or comma-separated string).
+                  oneOf:
+                    - type: array
+                      items:
+                        type: string
+                    - type: string
+                limit:
+                  type: integer
+                  minimum: 1
+                  default: 20
+                  description: Values above 100 are capped at 100.
+      responses:
+        "200":
+          description: Model shortlist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    example: list
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Model"
+        "400":
+          description: Invalid JSON, unknown field or invalid filter value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/v1/providers/{provider}/models:
     get:
@@ -2379,9 +2538,18 @@ paths:
     post:
       tags: [Provider Nodes]
       summary: Create provider node
+      description: >-
+        Optional `providerIdSuffix` (letters, digits, `-`, `_`, `.`; max 64; must start with a
+        letter or digit) replaces the random UUID in the generated node id
+        (`openai-compatible-<apiType>-<suffix>`, `anthropic-compatible-<suffix>`,
+        `anthropic-compatible-cc-<suffix>`). Blank keeps the UUID.
       responses:
         "201":
           description: Created node
+        "400":
+          description: Validation failure (including an invalid providerIdSuffix)
+        "409":
+          description: A provider node with the resulting id already exists
 
   /api/provider-nodes/{id}:
     patch:
@@ -6635,6 +6803,9 @@ paths:
     patch:
       tags: [System]
       summary: Save database backup retention settings
+      description: >-
+        Persists `keepLatest` / `retentionDays`. Operator-only: dashboard session, local CLI, or
+        login disabled — the persisted values drive the automatic pruning after every backup.
       requestBody:
         required: true
         content:
@@ -6653,6 +6824,11 @@ paths:
       responses:
         "200":
           description: Backup retention settings saved
+        "403":
+          description: >-
+            Machine credential refused. The saved retention is what automatic pruning applies
+            after every backup, so it requires the dashboard session or the local CLI (or login
+            disabled); API keys of any scope and `oma_` access tokens get 403.
 
   /api/storage/health:
     get:
@@ -7111,6 +7287,42 @@ paths:
       responses:
         "200":
           description: Rate limit status by account
+    post:
+      tags: [System]
+      summary: Toggle rate limit protection for a connection
+      description: Supported write path to toggle rateLimitProtection for a connection (PUT /api/providers/[id] deliberately does not modify this field). Setting enabled to false disables explicit protection, but does not opt an active API-key connection out of the global auto-enable safety net.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [connectionId, enabled]
+              properties:
+                connectionId:
+                  type: string
+                  description: Provider connection ID
+                enabled:
+                  type: boolean
+                  description: Whether explicit rate limit protection is enabled
+      responses:
+        "200":
+          description: Rate limit protection updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  connectionId:
+                    type: string
+                  enabled:
+                    type: boolean
+        "400":
+          description: Invalid request body
+        "500":
+          description: Failed to toggle rate limit
 
   /api/sessions:
     get:
@@ -11776,6 +11988,7 @@ paths:
       tags:
         - Relay
       summary: "GET relay › tokens"
+      x-always-protected: true
       responses:
         "200":
           description: OK
@@ -11783,6 +11996,7 @@ paths:
       tags:
         - Relay
       summary: "POST relay › tokens"
+      x-always-protected: true
       responses:
         "200":
           description: OK
@@ -11791,6 +12005,7 @@ paths:
       tags:
         - Relay
       summary: "DELETE relay › tokens › <id>"
+      x-always-protected: true
       responses:
         "200":
           description: OK
@@ -11798,6 +12013,7 @@ paths:
       tags:
         - Relay
       summary: "GET relay › tokens › <id>"
+      x-always-protected: true
       responses:
         "200":
           description: OK
@@ -11805,6 +12021,7 @@ paths:
       tags:
         - Relay
       summary: "PATCH relay › tokens › <id>"
+      x-always-protected: true
       responses:
         "200":
           description: OK
@@ -12748,6 +12965,133 @@ paths:
       responses:
         "200":
           description: OK
+  /api/settings/transfer/catalog:
+    get:
+      tags:
+        - Settings
+      summary: "GET settings › transfer › catalog"
+      description: >-
+        Provider accounts selectable for a selective transfer (id, provider, auth type, name,
+        email, group). Never returns a credential.
+      x-always-protected: true
+      responses:
+        "200":
+          description: OK
+        "403":
+          description: >-
+            Machine credential refused. Selective transfer requires the dashboard session or
+            the local CLI (or login disabled); API keys of any scope and `oma_` access tokens
+            get 403.
+  /api/settings/transfer/export:
+    post:
+      tags:
+        - Settings
+      summary: "POST settings › transfer › export"
+      description: >-
+        Seals the selected provider accounts, plus the custom provider nodes they use, under
+        the caller's passphrase (scrypt + AES-256-GCM) and returns the file as an attachment.
+        Credentials are never written in plaintext; the cleartext header carries counts only.
+      x-always-protected: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [connectionIds, passphrase, acknowledgeCredentialExport]
+              properties:
+                connectionIds:
+                  type: array
+                  minItems: 1
+                  maxItems: 1000
+                  items:
+                    type: string
+                passphrase:
+                  type: string
+                  minLength: 12
+                acknowledgeCredentialExport:
+                  type: boolean
+                  enum: [true]
+      responses:
+        "200":
+          description: Transfer file (`format` omniroute-provider-transfer, `version` 1).
+        "400":
+          description: Invalid body, missing acknowledgment, or an account that no longer exists.
+        "403":
+          description: >-
+            Machine credential refused. Selective transfer requires the dashboard session or
+            the local CLI (or login disabled); API keys of any scope and `oma_` access tokens
+            get 403.
+  /api/settings/transfer/preview:
+    post:
+      tags:
+        - Settings
+      summary: "POST settings › transfer › preview"
+      description: >-
+        Opens a transfer file with its passphrase and reports, per account and provider node,
+        whether it is new, identical, in conflict or unsupported on this install, with the
+        allowed actions (add, skip, replace). Writes nothing and never returns a credential.
+      x-always-protected: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bundle, passphrase]
+              properties:
+                bundle:
+                  type: object
+                passphrase:
+                  type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid file, or a wrong passphrase / modified file.
+        "403":
+          description: >-
+            Machine credential refused. Selective transfer requires the dashboard session or
+            the local CLI (or login disabled); API keys of any scope and `oma_` access tokens
+            get 403.
+  /api/settings/transfer/import:
+    post:
+      tags:
+        - Settings
+      summary: "POST settings › transfer › import"
+      description: >-
+        Applies a transfer file with per-item decisions keyed `connection:<id>` / `node:<id>`
+        (add, skip, replace; omitted keys use the recommended action). Every decision is
+        validated before the first write, a pre-import database backup is taken, nothing is
+        deleted, and destination priority, active flag and proxy settings are kept.
+      x-always-protected: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bundle, passphrase]
+              properties:
+                bundle:
+                  type: object
+                passphrase:
+                  type: string
+                decisions:
+                  type: object
+                  additionalProperties:
+                    type: string
+                    enum: [add, skip, replace]
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid file, wrong passphrase, or a decision not allowed for an item.
+        "403":
+          description: >-
+            Machine credential refused. Selective transfer requires the dashboard session or
+            the local CLI (or login disabled); API keys of any scope and `oma_` access tokens
+            get 403.
   /api/skills:
     get:
       tags:

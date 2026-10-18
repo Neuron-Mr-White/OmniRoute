@@ -1762,6 +1762,29 @@
       "stream": "https://inference.dahl.global/v1/chat/completions"
     }
   },
+  "daoxe": {
+    "format": "openai",
+    "headers": {
+      "apiKey": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "nonStream": {
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "oauth": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      }
+    },
+    "url": {
+      "nonStream": "https://api.daoxe.com/v1/chat/completions",
+      "stream": "https://api.daoxe.com/v1/chat/completions"
+    }
+  },
   "databricks": {
     "format": "openai",
     "headers": {
@@ -4299,6 +4322,29 @@
       "stream": "https://api.naga.ac/v1/chat/completions"
     }
   },
+  "nan": {
+    "format": "openai",
+    "headers": {
+      "apiKey": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "nonStream": {
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "oauth": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      }
+    },
+    "url": {
+      "nonStream": "https://api.nan.builders/v1/chat/completions",
+      "stream": "https://api.nan.builders/v1/chat/completions"
+    }
+  },
   "nanogpt": {
     "format": "openai",
     "headers": {
@@ -4714,29 +4760,6 @@
     "url": {
       "nonStream": "https://api.openai.com/v1/chat/completions",
       "stream": "https://api.openai.com/v1/chat/completions"
-    }
-  },
-  "opencode": {
-    "format": "openai",
-    "headers": {
-      "apiKey": {
-        "Accept": "text/event-stream",
-        "Authorization": "Bearer <TOK>",
-        "Content-Type": "application/json"
-      },
-      "nonStream": {
-        "Authorization": "Bearer <TOK>",
-        "Content-Type": "application/json"
-      },
-      "oauth": {
-        "Accept": "text/event-stream",
-        "Authorization": "Bearer <TOK>",
-        "Content-Type": "application/json"
-      }
-    },
-    "url": {
-      "nonStream": "https://opencode.ai/zen/v1",
-      "stream": "https://opencode.ai/zen/v1"
     }
   },
   "opencode-go": {

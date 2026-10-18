@@ -29,7 +29,7 @@ import {
 import { RateLimitReason } from "../../config/constants.ts";
 import { isProviderCircuitOpenResult, isRequestScopedUpstreamFailure } from "./comboPredicates.ts";
 import { isCloudflareFingerprintRejection } from "../errorClassifier.ts";
-import { isLocalModelPolicyResponse } from "../../../src/shared/utils/resolvedModelAccess.ts";
+import { isLocalModelPolicyResponse } from "../resolvedModelAccess.ts";
 // #10334 — connection-scope predicate shared with the persistence layer
 // (markAccountUnavailable) so the same-request combo skip and the persisted
 // connection cooldown agree on exactly which fallbackResult shapes qualify.

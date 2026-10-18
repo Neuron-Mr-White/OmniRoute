@@ -976,9 +976,12 @@ function getModelSpecIndex() {
  * getCanonicalModelSpecId() below) — callers that need prefix matching should use
  * that function instead.
  */
-export function findModelSpecIdByExactOrAlias(modelId: string): string | null {
+export function findModelSpecIdByExactOrAlias(
+  modelId: string,
+  options?: { stripNamespace?: boolean }
+): string | null {
   const slash = modelId.indexOf("/");
-  if (slash > 0 && slash < modelId.length - 1) {
+  if (options?.stripNamespace !== false && slash > 0 && slash < modelId.length - 1) {
     const unnamespaced = modelId.slice(slash + 1);
     const hit = findModelSpecIdByExactOrAlias(unnamespaced);
     if (hit) return hit;
@@ -992,13 +995,16 @@ export function findModelSpecIdByExactOrAlias(modelId: string): string | null {
   return null;
 }
 
-export function getCanonicalModelSpecId(modelId: string): string | null {
+export function getCanonicalModelSpecId(
+  modelId: string,
+  options?: { stripNamespace?: boolean }
+): string | null {
   if (MODEL_SPECS[modelId]) return modelId;
 
   // Strip provider/prefix namespace if present (e.g. "vertex/gemini-4-argon" -> "gemini-4-argon",
   // "agy/gemini-3.8-flash-high" -> "gemini-3.8-flash-high") so provider-qualified IDs match canonical specs.
   const slash = modelId.indexOf("/");
-  if (slash > 0 && slash < modelId.length - 1) {
+  if (options?.stripNamespace !== false && slash > 0 && slash < modelId.length - 1) {
     const unnamespaced = modelId.slice(slash + 1);
     const unnamespacedHit = getCanonicalModelSpecId(unnamespaced);
     if (unnamespacedHit) return unnamespacedHit;
@@ -1026,8 +1032,11 @@ export function getCanonicalModelSpecId(modelId: string): string | null {
   return null;
 }
 
-export function getModelSpec(modelId: string): ModelSpec | undefined {
-  const canonical = getCanonicalModelSpecId(modelId);
+export function getModelSpec(
+  modelId: string,
+  options?: { stripNamespace?: boolean }
+): ModelSpec | undefined {
+  const canonical = getCanonicalModelSpecId(modelId, options);
   return canonical ? MODEL_SPECS[canonical] : undefined;
 }
 

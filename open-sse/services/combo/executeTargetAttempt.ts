@@ -51,7 +51,7 @@ import { recordStickyBinding } from "./sessionStickiness.ts";
 import { recordStickyWeightedSuccess } from "./rrState.ts";
 import { resolveReasoningBufferedMaxTokens, toPositiveInteger } from "../reasoningTokenBuffer.ts";
 import { parseModel } from "../model.ts";
-import { getNextFamilyFallback } from "../modelFamilyFallback.ts";
+import { getNextComboFamilyFallback } from "../modelFamilyFallbackPolicy.ts";
 import type { ProviderProfile } from "../accountFallback.ts";
 import {
   MAX_FALLBACK_WAIT_MS,
@@ -437,13 +437,14 @@ export async function executeTargetAttempt(
         state.observeFailure(false, target.executionKey);
         if (handlePreContentStreamRetry(quality, retry, deps, modelStr)) continue;
         familyTried.add(modelStr);
-        // A request-scoped refusal (invalid request, context overflow) is a property of
-        // the request, not of the effort tier — replaying it on a sibling alias of the
-        // same model just repeats the refusal, so let the combo advance instead.
-        const familyNext =
-          provider && provider !== "unknown" && !quality.upstreamFailure?.requestScoped
-            ? getNextFamilyFallback(modelStr, familyTried, provider)
-            : null;
+        const familyNext = await getNextComboFamilyFallback({
+          model: modelStr,
+          tried: familyTried,
+          provider,
+          connectionId: effectiveConnectionId,
+          headers: deps.requestHeaders,
+          requestScoped: quality.upstreamFailure?.requestScoped,
+        });
         if (familyNext && familyNext !== modelStr) {
           deps.log.info("COMBO", `Quality fail ${modelStr} -> family sibling ${familyNext}`);
           modelStr = familyNext;

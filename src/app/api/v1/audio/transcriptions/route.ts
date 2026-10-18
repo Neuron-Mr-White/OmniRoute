@@ -18,7 +18,13 @@ import { resolveDynamicAudioProviders } from "@/app/api/v1/_shared/audioProvider
 import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
 import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import { enforceApiKeyPolicy } from "@/shared/utils/apiKeyPolicy";
-import { intersectAllowedConnectionIds } from "@/sse/handlers/chat/connectionConstraints";
+import {
+  createComboTargetKeyGate,
+  isKeyScopeBlockedCredentials,
+  keyScopeBlockedResponse,
+  keylessProviderRejection,
+  resolveKeyConnectionScope,
+} from "@/sse/services/keyConnectionScope";
 import {
   isAllRateLimitedCredentials,
   rateLimitedProviderResponse,
@@ -68,29 +74,6 @@ function withModel(formData: FormData, modelStr: string): FormData {
   }
   next.set("model", modelStr);
   return next;
-}
-
-/**
- * `getProviderCredentials` returns `{ blockedByKeyPolicy: true }` when the
- * provider has connections but the caller key's scope hid every one of them —
- * a truthy object without any secret that must never be dispatched.
- */
-function isKeyScopeBlocked(credentials: unknown): credentials is { blockedCount?: number } {
-  return (
-    !!credentials &&
-    typeof credentials === "object" &&
-    (credentials as { blockedByKeyPolicy?: unknown }).blockedByKeyPolicy === true
-  );
-}
-
-/** Same 403 chat answers for a pool emptied by the key's scope (#13832). */
-function keyScopeBlockedResponse(provider: string, credentials: { blockedCount?: number }) {
-  const count = Number(credentials.blockedCount) || 1;
-  return errorResponse(
-    HTTP_STATUS.FORBIDDEN,
-    `[${provider}] ${count} connection(s) exist but are excluded by this API key's ` +
-      `connection allowlist / quota scope — add them to the key in the dashboard, or use a key without that scope`
-  );
 }
 
 /**
@@ -156,7 +139,7 @@ async function transcribeWithModel(
     // provider has no credentials, retry gateways that list the same nested
     // model id (e.g. OpenRouter's `deepgram/nova-3`). A pool emptied by the
     // key's scope may still be served by an in-scope gateway.
-    if (!credentials || isKeyScopeBlocked(credentials)) {
+    if (!credentials || isKeyScopeBlockedCredentials(credentials)) {
       const candidates = audioModelAliasCandidates(modelStr, provider, resolvedModel);
       const alternate = findAlternateAudioProvider(
         AUDIO_TRANSCRIPTION_PROVIDERS,
@@ -172,7 +155,7 @@ async function transcribeWithModel(
         if (
           alternateCredentials &&
           !isAllRateLimitedCredentials(alternateCredentials) &&
-          !isKeyScopeBlocked(alternateCredentials)
+          !isKeyScopeBlockedCredentials(alternateCredentials)
         ) {
           provider = alternate.provider;
           resolvedModel = alternate.model;
@@ -191,12 +174,21 @@ async function transcribeWithModel(
         )
       );
     }
-    if (isKeyScopeBlocked(credentials)) {
+    if (isKeyScopeBlockedCredentials(credentials)) {
       return keyScopeBlockedResponse(provider, credentials);
     }
     if (isAllRateLimitedCredentials(credentials)) {
       return rateLimitedProviderResponse(provider, credentials);
     }
+  } else if (providerConfig) {
+    // GHSA-3w2r: a keyless provider (local default or a keyless remote) is
+    // reachable by a connection-scoped key only when its allowlist admits
+    // keyless providers or an in-scope connection serves it (chat's #9057).
+    const keylessCredentialKey = providerConfig.credentialProviderId || provider;
+    const keylessRejection = await keylessProviderRejection(provider, allowedConnections, () =>
+      getProviderCredentialsWithQuotaPreflight(keylessCredentialKey, null, allowedConnections)
+    );
+    if (keylessRejection) return keylessRejection;
   }
 
   let response = await handleAudioTranscription({
@@ -284,14 +276,13 @@ export async function POST(request) {
   // request, matching the pattern every other proxied route follows (#13544).
   const apiKeyId = policy.apiKeyInfo?.id || null;
   const apiKeyName = policy.apiKeyInfo?.name || null;
-  // GHSA-3w2r: credential selection stays on the key's allowed connections —
-  // for the internal self-loop bearer, those of the caller key it names
+  // GHSA-3w2r: credential selection stays on the key's connection scope — for
+  // the internal self-loop bearer, that of the caller key it names
   // (x-omniroute-self-loop-key-id, resolved by enforceApiKeyPolicy). null = the
   // key is not connection-scoped.
-  const allowedConnections = intersectAllowedConnectionIds(
-    policy.apiKeyInfo?.allowedConnections ?? null,
-    null
-  );
+  const scope = await resolveKeyConnectionScope(policy.apiKeyInfo);
+  if (scope.rejection) return scope.rejection;
+  const { allowedConnections } = scope;
 
   // A bare name (no "/") may be a combo. /v1/models advertises combos, and chat and
   // embeddings both resolve them — resolving here too keeps the catalog honest and
@@ -321,7 +312,7 @@ export async function POST(request) {
               apiKeyName,
               allowedConnections
             ),
-          isModelAvailable: undefined,
+          isModelAvailable: createComboTargetKeyGate(policy, modelStr),
           log,
           settings,
           allCombos: allCombos as any,

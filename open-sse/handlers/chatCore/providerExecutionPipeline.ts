@@ -14,7 +14,8 @@ import { recoverAnthropicThinkingSignature } from "./thinkingSignatureRecovery.t
 import { isAnthropicThinkingSignatureError } from "./passthroughHelpers.ts";
 import {
   isModelUnavailableError,
-  getNextFamilyFallback as defaultGetNextFamilyFallback,
+  getNextEligibleFamilyFallback,
+  isFamilyFallbackEligible,
 } from "../../services/modelFamilyFallback.ts";
 import { COOLDOWN_MS } from "../../config/errorConfig.ts";
 import { normalizeHeaders } from "../../utils/headers.ts";
@@ -136,7 +137,7 @@ export interface ProviderExecutionPipelineInput {
     currentModel: string,
     triedModels: Set<string>,
     providerHint?: string | null
-  ) => string | null;
+  ) => string | null | Promise<string | null>;
 }
 
 const LEASE_MISMATCH_STATUS = 409;
@@ -341,7 +342,29 @@ export async function runProviderExecutionPipeline(
   let authRefreshPending = false;
   let authRefreshed = false;
   let modelFallbackPending = false;
-  const resolveFamilyFallback = input.getNextFamilyFallback ?? defaultGetNextFamilyFallback;
+  const resolveFamilyFallback = async (
+    currentModel: string,
+    triedModels: Set<string>,
+    providerHint?: string | null
+  ) => {
+    const connectionId = currentConnectionId(connection);
+    if (!input.getNextFamilyFallback) {
+      return getNextEligibleFamilyFallback(
+        currentModel,
+        triedModels,
+        providerHint ?? target.provider,
+        connectionId
+      );
+    }
+
+    const excluded = new Set(triedModels);
+    while (true) {
+      const candidate = await input.getNextFamilyFallback(currentModel, excluded, providerHint);
+      if (!candidate || excluded.has(candidate)) return null;
+      if (isFamilyFallbackEligible(candidate, target.provider, connectionId)) return candidate;
+      excluded.add(candidate);
+    }
+  };
 
   while (
     attempts < maxAttempts ||
@@ -587,13 +610,16 @@ export async function runProviderExecutionPipeline(
         // keep statusText
       }
       if (isModelUnavailableError(status, fallbackMessage, target.provider)) {
-        const nextModel = resolveFamilyFallback(
+        const nextModel = await resolveFamilyFallback(
           wire.currentModel,
           wire.triedModels,
           target.provider
         );
         if (nextModel) {
-          wire.setBodyAndModel({ ...wire.body, model: nextModel }, nextModel);
+          wire.body = { ...wire.body, model: nextModel };
+          wire.currentModel = nextModel;
+          wire.triedModels.add(nextModel);
+          wire.setBodyAndModel(wire.body, nextModel);
           modelFallbackPending = true;
           continue;
         }

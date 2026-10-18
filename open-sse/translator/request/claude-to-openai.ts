@@ -89,6 +89,30 @@ function shouldUseNativeResponsesWebSearch(credentials: unknown): boolean {
   );
 }
 
+// OpenAI service_tier values. Anthropic's "standard_only" has no OpenAI twin beyond
+// "default"; "fast" is the alias the Codex billing/executor path already accepts.
+const OPENAI_SERVICE_TIERS = new Set(["auto", "default", "flex", "priority", "scale"]);
+const CLAUDE_TO_OPENAI_SERVICE_TIER: Record<string, string> = {
+  standard_only: "default",
+  fast: "priority",
+};
+// Only targets known to accept a top-level service_tier get it; strict
+// OpenAI-compatible gateways reject unknown fields with a 400.
+const SERVICE_TIER_PROVIDERS = new Set(["openai", "azure-openai", "codex"]);
+
+/** Client service_tier to keep across the Claude → OpenAI pivot, or undefined to drop it. */
+function resolveOpenAIServiceTier(tier: unknown, credentials: unknown): string | undefined {
+  if (typeof tier !== "string") return undefined;
+  const provider =
+    credentials !== null && typeof credentials === "object" && !Array.isArray(credentials)
+      ? (credentials as JsonRecord)._provider
+      : undefined;
+  if (typeof provider !== "string" || !SERVICE_TIER_PROVIDERS.has(provider)) return undefined;
+  const normalized = tier.trim().toLowerCase();
+  const mapped = CLAUDE_TO_OPENAI_SERVICE_TIER[normalized] ?? normalized;
+  return OPENAI_SERVICE_TIERS.has(mapped) ? mapped : undefined;
+}
+
 // Convert Claude request to OpenAI format
 export function claudeToOpenAIRequest(model, body, stream, credentials: unknown = null) {
   // #2069 — when the routed provider honors OpenAI-format cache_control breakpoints
@@ -319,6 +343,11 @@ export function claudeToOpenAIRequest(model, body, stream, credentials: unknown 
   ) {
     result.reasoning_effort = "none";
   }
+
+  // Keep a client-sent tier across the pivot: billing reads it from the source body,
+  // so dropping it here made the reported tier and the tier actually served diverge.
+  const serviceTier = resolveOpenAIServiceTier(body.service_tier, credentials);
+  if (serviceTier) result.service_tier = serviceTier;
 
   return result;
 }

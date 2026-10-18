@@ -270,7 +270,16 @@ jobs:
           done
           for g in "${ratchet_gates[@]}"; do
             echo "::group::check:$g (ratchet)"
-            npm run "check:$g" -- --ratchet || failed+=("$g")
+            # boundary is base-relative on PR events, like file-size (#8522): the ceiling
+            # becomes max(baseline ceiling, edges on the PR base), so open-sse → src edges
+            # other merges added after the seed never red an innocent PR; only edges this
+            # PR adds block. workflow_dispatch (no PR base) keeps the absolute ceiling.
+            case "$g" in boundary) BASE_RELATIVE=1 ;; *) BASE_RELATIVE= ;; esac
+            if [ -n "$BASE_RELATIVE" ] && [ -n "${PR_BASE_SHA:-}" ]; then
+              npm run "check:$g" -- --ratchet --base-ref "$PR_BASE_SHA" || failed+=("$g")
+            else
+              npm run "check:$g" -- --ratchet || failed+=("$g")
+            fi
             echo "::endgroup::"
           done
           echo "::group::typecheck:core"

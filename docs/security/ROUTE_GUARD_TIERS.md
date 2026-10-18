@@ -196,6 +196,7 @@ server process.
 | `/api/settings/import-json`               | Replaces the full settings blob                |
 | `/api/providers/health-autopilot/actions` | Executes autopilot remediation actions         |
 | `/api/settings/obsidian`                  | Mints reusable WebDAV creds for any vault root |
+| `/api/relay/tokens`                       | Mints, lists, edits and revokes relay tokens   |
 
 **Response on violation:** `401 Authentication required`
 
@@ -218,8 +219,12 @@ and `admin`) and to `oma_` access tokens. The destructive counterparts hold the 
 `POST /api/db-backups/import` (uploaded `.sqlite`, `dryRun=true` included), `POST /api/db-backups`
 (restore a stored backup by id) and `POST /api/settings/import-json` (legacy JSON restore)
 replace the live database or the whole settings/connections/API-key set, so a machine credential
-cannot trigger them either. Listing, creating, retention and cleanup of backups
-(`GET`/`PUT`/`PATCH`/`DELETE /api/db-backups`) keep ordinary management auth. Sync token
+cannot trigger them either. Destroying restore points holds the same boundary:
+`DELETE /api/db-backups` (cleanup — keep the latest N / drop older than D days) and
+`PATCH /api/db-backups` (retention settings), because the persisted retention is exactly what
+`cleanupDbBackups()` applies after every automatic backup (`src/lib/db/backup.ts`), so a machine
+credential that could save `keepLatest: 1` would prune everything on the next snapshot. Listing
+and creating backups (`GET`/`PUT /api/db-backups`) keep ordinary management auth. Sync token
 issuance (`POST /api/sync/tokens`) uses the same helper, plus the trusted loopback
 internal-service token.
 

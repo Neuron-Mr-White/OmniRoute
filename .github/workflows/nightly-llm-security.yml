@@ -69,8 +69,16 @@ jobs:
           echo "::error::Test server did not come up on 21778 in 120s — see server.log. Refusing to run the guard eval against an unknown target."
           tail -40 server.log || true
           exit 1
+      # Run the lockfile's promptfoo (installed by `npm ci` above), never `promptfoo@latest`:
+      # promptfoo ≥ 0.123.1 (promptfoo/promptfoo#10866) throws
+      # `result?.error?.includes is not a function` inside its rate-limit classifier when
+      # the https provider hands it a parsed 4xx JSON body — exactly what the guard answers
+      # in block mode — so every blocked request became an eval ERROR, not a PASS
+      # (2026-10-17, run 39007982929, 0.124.1). The exact pin lives in package.json and
+      # tests/unit/build/llm-security-nightly-promptfoo-pin.test.ts keeps it off the broken
+      # releases; `--no-install` fails loudly instead of fetching whatever is current.
       - name: promptfoo guard-validation
-        run: npx --yes promptfoo@latest eval -c promptfooconfig.yaml --no-cache
+        run: npx --no-install promptfoo eval -c promptfooconfig.yaml --no-cache
         env:
           OMNIROUTE_URL: http://localhost:21778
           OMNIROUTE_API_KEY: not-needed-blocked-before-upstream

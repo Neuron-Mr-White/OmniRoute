@@ -137,6 +137,10 @@
 - [`PUT /api/settings/task-routing`](#put-apisettingstask-routing)
 - [`GET /api/settings/tier-config`](#get-apisettingstier-config)
 - [`PUT /api/settings/tier-config`](#put-apisettingstier-config)
+- [`GET /api/settings/transfer/catalog`](#get-apisettingstransfercatalog)
+- [`POST /api/settings/transfer/export`](#post-apisettingstransferexport)
+- [`POST /api/settings/transfer/preview`](#post-apisettingstransferpreview)
+- [`POST /api/settings/transfer/import`](#post-apisettingstransferimport)
 
 ### GET /api/settings/memory
 
@@ -1537,6 +1541,56 @@ PUT settings › tier config
 
 ```bash
 curl -X PUT http://localhost:20128/api/settings/tier-config \
+  -H "Authorization: Bearer $OMNIROUTE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### GET /api/settings/transfer/catalog
+
+GET settings › transfer › catalog
+
+Provider accounts selectable for a selective transfer (id, provider, auth type, name, email, group). Never returns a credential.
+
+```bash
+curl http://localhost:20128/api/settings/transfer/catalog \
+  -H "Authorization: Bearer $OMNIROUTE_TOKEN"
+```
+
+### POST /api/settings/transfer/export
+
+POST settings › transfer › export
+
+Seals the selected provider accounts, plus the custom provider nodes they use, under the caller's passphrase (scrypt + AES-256-GCM) and returns the file as an attachment. Credentials are never written in plaintext; the cleartext header carries counts only.
+
+```bash
+curl -X POST http://localhost:20128/api/settings/transfer/export \
+  -H "Authorization: Bearer $OMNIROUTE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### POST /api/settings/transfer/preview
+
+POST settings › transfer › preview
+
+Opens a transfer file with its passphrase and reports, per account and provider node, whether it is new, identical, in conflict or unsupported on this install, with the allowed actions (add, skip, replace). Writes nothing and never returns a credential.
+
+```bash
+curl -X POST http://localhost:20128/api/settings/transfer/preview \
+  -H "Authorization: Bearer $OMNIROUTE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### POST /api/settings/transfer/import
+
+POST settings › transfer › import
+
+Applies a transfer file with per-item decisions keyed `connection:<id>` / `node:<id>` (add, skip, replace; omitted keys use the recommended action). Every decision is validated before the first write, a pre-import database backup is taken, nothing is deleted, and destination priority, active flag and proxy settings are kept.
+
+```bash
+curl -X POST http://localhost:20128/api/settings/transfer/import \
   -H "Authorization: Bearer $OMNIROUTE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}'

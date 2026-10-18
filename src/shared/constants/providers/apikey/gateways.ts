@@ -766,7 +766,6 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     icon: "opencode",
     color: "#6366f1",
     website: "https://opencode.ai/zen",
-    anonymousFallback: true,
     // One credential fronts many upstream models (deepseek, glm, qwen, grok,
     // minimax, ...). A 402 means "this MODEL is not in the plan", not "the
     // account is out of credit", so it must reach the per-model lockout branch
@@ -781,7 +780,6 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     icon: "opencode",
     color: "#6366f1",
     website: "https://opencode.ai/go",
-    anonymousFallback: true,
     // One credential fronts many upstream models (deepseek, glm, qwen, grok,
     // minimax, ...). A 402 means "this MODEL is not in the plan", not "the
     // account is out of credit", so it must reach the per-model lockout branch
@@ -1599,5 +1597,20 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint: "Create an API key at https://seekai.cc, then paste it here as a Bearer token.",
     apiHint:
       "Create an API key at https://seekai.cc, then paste it here as a Bearer token. OpenAI-compatible base URL: https://seekai.cc/v1.",
+  },
+  // DaoXE (https://daoxe.com) — QuantumNous New-API gateway. OpenAI-compatible /v1;
+  // /v1/models is key-gated and account-scoped, so models are discovered live.
+  daoxe: {
+    id: "daoxe",
+    serviceKinds: ["llm"],
+    alias: "daoxe",
+    name: "DaoXE",
+    icon: "hub",
+    color: "#0F766E",
+    textIcon: "DX",
+    passthroughModels: true,
+    website: "https://daoxe.com",
+    apiHint:
+      "Create an API token at https://daoxe.com/token, then paste it here as a Bearer token. OpenAI-compatible base URL: https://api.daoxe.com/v1.",
   },
 };

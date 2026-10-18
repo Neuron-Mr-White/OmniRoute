@@ -1,5 +1,6 @@
 import { inheritEmptyTurnPolicy } from "../../utils/emptyTurnPolicy.ts";
 import { getCodexClientSessionId } from "../../config/codexIdentity.ts";
+import { modelAfterFamilyFallback } from "../../services/modelFamilyFallbackPolicy.ts";
 import {
   noteCodexTurnStateProvenance,
   readCodexTurnStateHeader,
@@ -309,10 +310,11 @@ export async function runStreamingTail(deps: StreamingTailDeps) {
     await onRequestSuccess();
   }
 
+  const responseModel = modelAfterFamilyFallback(model, currentModel, effectiveModel, finalBody);
   const responseHeaders = assembleStreamingResponseHeaders({
     providerHeaders: providerResponse.headers,
     provider,
-    model,
+    model: responseModel,
     pendingRequestId,
     compressionResponseMeta,
     comboStrategy,
@@ -745,7 +747,7 @@ export async function runStreamingTail(deps: StreamingTailDeps) {
     createPiiTransform,
     clientRawRequestHeaders: clientRawRequest?.headers,
     clientResponseFormat,
-    echoModel,
+    echoModel: echoModel || (currentModel !== effectiveModel ? responseModel : null),
     responseHeaders,
     credentialRedactionEnabled: credentialGate.credentialRedactionEnabled,
     credentialDisabledGuardrails: credentialGate.credentialDisabledGuardrails,

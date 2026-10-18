@@ -148,7 +148,7 @@ export async function GET(request: Request) {
     const requestQueueSettings = resolveResilienceSettings(await getSettings()).requestQueue;
     const safeConnections = connections.map((c) => {
       const providerSpecificData = c.providerSpecificData
-        ? sanitizeProviderSpecificDataForResponse(c.providerSpecificData)
+        ? sanitizeProviderSpecificDataForResponse(c.providerSpecificData, { revealKeys })
         : undefined;
       return {
         ...c,
