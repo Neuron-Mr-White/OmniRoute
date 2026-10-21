@@ -126,6 +126,12 @@ export function isClientAbortError(err) {
     case "ETIMEDOUT":
     case "ENOTCONN":
     case "ECANCELED":
+    // undici InformationalError (informational 1xx interim events). Already
+    // handled inside undici's fetch pipeline; a stray copy reaching the process
+    // level killed production on 2026-10-15 (exit 7 → nginx 502 storm).
+    // Hot-patched into compiled chunks then; carried at source since the
+    // v3.8.52 rebuild. Keep alongside ECANCELED — same benign class.
+    case "UND_ERR_INFO":
       return true;
     default:
       return false;
@@ -283,6 +289,24 @@ export function isHandledStreamLifecycleError(err) {
 }
 
 /**
+ * True when any of the guard's five classifiers matches. Shared by
+ * shouldSwallowUncaught and its cause-chain walk so the wrapped and unwrapped
+ * shapes of the same error are always classified identically.
+ *
+ * @param {unknown} err
+ * @returns {boolean}
+ */
+function isBenignGuardError(err) {
+  return (
+    isClientAbortError(err) ||
+    isRecoverableUpstreamTimeoutError(err) ||
+    isIntentionalComboAbort(err) ||
+    isUpstreamNetworkError(err) ||
+    isHandledStreamLifecycleError(err)
+  );
+}
+
+/**
  * Decide whether a process-level uncaughtException/unhandledRejection should be
  * swallowed (benign client-abort, or a recoverable upstream timeout the
  * request layer already handles — #12861 / RELAY_TIMEOUT) or allowed to
@@ -296,14 +320,16 @@ export function isHandledStreamLifecycleError(err) {
  * @returns {boolean} true => swallow (log only), false => re-throw / let crash.
  */
 export function shouldSwallowUncaught(err, origin) {
-  if (
-    !isClientAbortError(err) &&
-    !isRecoverableUpstreamTimeoutError(err) &&
-    !isIntentionalComboAbort(err) &&
-    !isUpstreamNetworkError(err) &&
-    !isHandledStreamLifecycleError(err)
-  ) {
-    return false;
+  if (!isBenignGuardError(err)) {
+    // undici/Node wrap syscall failures: `TypeError: terminated` carries the
+    // real code (e.g. ECONNRESET) on `cause`, and `TypeError: fetch failed`
+    // wraps a socket error the same way. The request layer already handles the
+    // wrapped condition; the stray outer copy must not be process-fatal.
+    // Production 2026-10-15 (exit 7 → ~17 s nginx 502 storm); hot-patched into
+    // compiled chunks then, carried at source since the v3.8.52 rebuild.
+    if (!isBenignGuardError(err && typeof err === "object" ? err.cause : undefined)) {
+      return false;
+    }
   }
   // Only swallow when the origin matches what the guard installed for. If some
   // other subsystem raised it (e.g. a deliberate `throw` in a domain), keep the
