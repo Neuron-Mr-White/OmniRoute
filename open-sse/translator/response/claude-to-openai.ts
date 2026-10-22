@@ -56,7 +56,10 @@ function flushThinkingContinuity(state) {
   // uses it to reinsert each thinking block directly before its owning tool_use
   // on the next turn (2026-10-22: front-unshifting interleaved blocks reordered
   // the latest assistant message and Anthropic 400'd "thinking blocks cannot be
-  // modified").
+  // modified"). Text-block indexes ride along as {kind:"text"} markers: an
+  // OpenAI replay cannot reproduce intra-turn text positions, so any text
+  // inside a thinking turn disables the positional restore (store-side check).
+  const textIndexes = state.claudeTextIndexes instanceof Set ? [...state.claudeTextIndexes] : [];
   const sequence = [
     ...[...blocks.entries()].map(([index, block]) => ({ index, kind: "thinking", block })),
     ...[...state.toolCalls.entries()].map(([index, toolCall]) => ({
@@ -64,12 +67,15 @@ function flushThinkingContinuity(state) {
       kind: "tool_use",
       toolUseId: toolCall?.id,
     })),
+    ...textIndexes.map((index) => ({ index, kind: "text" })),
   ]
     .sort((left, right) => left.index - right.index)
     .map((item) =>
       item.kind === "thinking"
         ? { kind: "thinking", block: item.block }
-        : { kind: "tool_use", toolUseId: item.toolUseId }
+        : item.kind === "tool_use"
+          ? { kind: "tool_use", toolUseId: item.toolUseId }
+          : { kind: "text" }
     );
   storeClaudeThinkingBlocks({
     toolUseIds: [...state.toolCalls.values()].map((toolCall) => toolCall?.id),
@@ -143,6 +149,11 @@ export function claudeToOpenAIResponse(chunk, state) {
       const block = chunk.content_block;
       if (block?.type === "text") {
         state.textBlockStarted = true;
+        // Position marker for thinking-continuity: text blocks interleaved with
+        // thinking/tool_use make positional restore impossible from an OpenAI
+        // replay (the client cannot reproduce intra-turn text positions).
+        if (!(state.claudeTextIndexes instanceof Set)) state.claudeTextIndexes = new Set();
+        state.claudeTextIndexes.add(chunk.index);
       } else if (block?.type === "thinking") {
         thinkingBlocksOf(state).set(chunk.index, {
           type: "thinking",

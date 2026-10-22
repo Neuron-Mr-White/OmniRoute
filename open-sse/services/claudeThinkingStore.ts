@@ -41,7 +41,9 @@ export type ClaudeSignedThinkingBlock =
  */
 export type ClaudeThinkingSequenceItem =
   | { kind: "thinking"; block: ClaudeSignedThinkingBlock }
-  | { kind: "tool_use"; toolUseId: string };
+  | { kind: "tool_use"; toolUseId: string }
+  /** Position-only marker: a text block sat inside the turn (no restore possible). */
+  | { kind: "text" };
 
 /** Restore plan: thinking blocks to reinsert, each directly before its tool_use. */
 export type ClaudeThinkingRestorePlan = Array<{
@@ -122,7 +124,9 @@ function normalizeSequence(
   for (const raw of sequence) {
     if (!raw || typeof raw !== "object") return undefined;
     const item = raw as Record<string, unknown>;
-    if (item.kind === "tool_use") {
+    if (item.kind === "text") {
+      items.push({ kind: "text" });
+    } else if (item.kind === "tool_use") {
       const id = item.toolUseId;
       if (typeof id !== "string" || !toolUseIds.includes(id) || seenToolIds.has(id)) return undefined;
       seenToolIds.add(id);
@@ -243,6 +247,8 @@ export function storeClaudeThinkingFromResponse(
         toolUseIds.push(id);
         sequence.push({ kind: "tool_use", toolUseId: id });
       }
+    } else if (type === "text") {
+      sequence.push({ kind: "text" });
     }
   }
   return storeClaudeThinkingBlocks({
@@ -284,6 +290,14 @@ export function restoreClaudeThinkingPlan(args: {
     const entryToolIds = (entry.sequence ?? [])
       .filter((item) => item.kind === "tool_use")
       .map((item) => (item as { kind: "tool_use"; toolUseId: string }).toolUseId);
+    // A text block inside the turn (thinking + "Let me check…" commentary +
+    // tool_use) makes positional restore impossible: an OpenAI replay carries
+    // one flat text content and cannot reproduce where the text sat between
+    // thinking/tool_use blocks, and Anthropic validates thinking-block
+    // POSITIONS (2026-10-22 production: same-account restore with text
+    // interleaved 400'd "cannot be modified"). Restore nothing — the #5312
+    // placeholder path is accepted verbatim.
+    if ((entry.sequence ?? []).some((item) => item.kind === "text")) return null;
     // Legacy entries without a stored sequence: approximate the old behavior
     // (all blocks before the first tool_use) — the store is memory-only, so
     // entries never outlive a restart and this path only serves races during a

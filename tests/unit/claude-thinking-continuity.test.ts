@@ -696,3 +696,70 @@ test("recovery retries a 'cannot be modified' 400 only when a router-restored bl
   assert.equal(recovery2.retried, false);
   assert.equal(calls2, 1, "client-owned failure surfaces unchanged");
 });
+
+// ─── 2026-10-22 (b): text-interleaved turns restore nothing ───
+// Production follow-up (conv_4ec9241b, same-account, post-affinity): turns whose
+// original shape was [thinking, text("Let me check…"), tool_use] restored the
+// signed block directly before the tool_use — i.e. AFTER the text — but
+// Anthropic validated its original position BEFORE the text → 400. An OpenAI
+// replay cannot reproduce intra-turn text positions, so any text inside a
+// thinking turn now disables the restore (placeholder fallback is accepted).
+
+function textInterleavedToolTurnEvents(): Block[] {
+  return [
+    { type: "message_start", message: { id: "msg_3", model: MODEL, usage: { input_tokens: 10 } } },
+    { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } },
+    { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: THINKING_TEXT } },
+    { type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: SIGNATURE } },
+    { type: "content_block_stop", index: 0 },
+    { type: "content_block_start", index: 1, content_block: { type: "text", text: "" } },
+    { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "Let me check the config." } },
+    { type: "content_block_stop", index: 1 },
+    { type: "content_block_start", index: 2, content_block: { type: "tool_use", id: "toolu_TXT", name: "read_file", input: {} } },
+    { type: "content_block_delta", index: 2, delta: { type: "input_json_delta", partial_json: '{"path":"a.ts"}' } },
+    { type: "content_block_stop", index: 2 },
+    { type: "message_delta", delta: { stop_reason: "tool_use" }, usage: { output_tokens: 42 } },
+    { type: "message_stop" },
+  ];
+}
+
+test("text interleaved between thinking and tool_use restores nothing", () => {
+  streamClaudeToChat(textInterleavedToolTurnEvents());
+  const plan = store.restoreClaudeThinkingPlan({
+    toolUseIds: ["toolu_TXT"],
+    provider: "claude",
+    model: MODEL,
+  });
+  assert.equal(plan, null, "no positional restore when text sits inside the turn");
+
+  // And the translated request carries no stored signature (placeholder path).
+  const turn = assistantTurn(
+    translateChatTurn([
+      { role: "user", content: "Read a.ts" },
+      {
+        role: "assistant",
+        content: "Let me check the config.",
+        reasoning_content: THINKING_TEXT,
+        tool_calls: [
+          { id: "toolu_TXT", type: "function", function: { name: "read_file", arguments: '{"path":"a.ts"}' } },
+        ],
+      },
+      { role: "tool", tool_call_id: "toolu_TXT", content: "ok" },
+    ])
+  );
+  assert.equal(
+    turn.content.some((b) => (b as Block).signature === SIGNATURE),
+    false,
+    "stored signature must not leak into a text-interleaved turn"
+  );
+});
+
+test("pure thinking+tool turns (no text) still restore positionally", () => {
+  streamClaudeToChat(interleavedToolTurnEvents());
+  const plan = store.restoreClaudeThinkingPlan({
+    toolUseIds: ["toolu_FIRST", "toolu_SECOND"],
+    provider: "claude",
+    model: MODEL,
+  });
+  assert.ok(plan, "text-free interleaved turns keep the positional restore");
+});
