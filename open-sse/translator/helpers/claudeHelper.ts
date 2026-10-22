@@ -742,11 +742,33 @@ export function prepareClaudeRequest(
               }
               delete block.data;
               delete block.signature;
-            } else if (supportsRedactedThinking) {
+            } else if (
+              supportsRedactedThinking &&
+              // GENUINE Anthropic-issued blocks (non-empty signature/data) stay
+              // verbatim on EVERY assistant message, not just the latest:
+              // swapping them for the synthetic DEFAULT blob modifies blocks the
+              // Messages API validates against the original response, and the
+              // 2026-10-22 production class showed Anthropic rejects synthetic
+              // redacted_thinking data on older tool-cycle turns exactly as it
+              // does on the latest ("cannot be modified"). This includes blocks
+              // claudeThinkingStore restored into older turns. Unsigned/empty
+              // blocks (never issued by Anthropic) still get the placeholder.
+              !(
+                (block.type === "thinking" &&
+                  typeof block.signature === "string" &&
+                  block.signature.length > 0) ||
+                (block.type === "redacted_thinking" &&
+                  typeof block.data === "string" &&
+                  block.data.length > 0 &&
+                  block.data !== DEFAULT_THINKING_CLAUDE_SIGNATURE)
+              )
+            ) {
               block.type = "redacted_thinking";
               block.data = DEFAULT_THINKING_CLAUDE_SIGNATURE;
               delete block.thinking;
               delete block.signature;
+            } else if (supportsRedactedThinking) {
+              // Genuine block (or the DEFAULT placeholder itself): keep verbatim.
             } else {
               const existing =
                 typeof block.thinking === "string" && block.thinking.length > 0
