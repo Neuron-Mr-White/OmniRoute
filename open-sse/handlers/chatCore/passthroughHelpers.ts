@@ -248,45 +248,11 @@ function hasBlock(message: MessageLike | null | undefined, type: string): boolea
 }
 
 /**
- * Match only the Anthropic validation failure this recovery path understands.
- * Generic 400s and the separate "latest assistant message cannot be modified"
- * validation error must continue through the normal error path unchanged.
+ * Indexes of the assistant messages that belong to the still-open trailing
+ * tool-use cycle (a trailing unresolved assistant tool_use turn, then every
+ * assistant tool_use turn still paired with a following user tool_result).
  */
-export function isAnthropicThinkingSignatureError({
-  provider,
-  status,
-  message,
-}: ThinkingSignatureError): boolean {
-  const isAnthropicTarget =
-    provider === "claude" ||
-    (typeof provider === "string" && provider.startsWith("anthropic-compatible-"));
-  if (!isAnthropicTarget || status !== 400 || typeof message !== "string") return false;
-
-  return /invalid\s+[`'\"]?signature[`'\"]?\s+in\s+[`'\"]?thinking[`'\"]?\s+block/i.test(message);
-}
-
-/**
- * Build a one-shot recovery body after Anthropic has explicitly rejected a
- * thinking signature. Historical thinking blocks are omitted, but the complete
- * active tool-use cycle is preserved verbatim: when the request ends in one or
- * more `user[tool_result]` turns, every paired assistant `tool_use` turn in that
- * still-open cycle keeps its thinking blocks. A trailing unresolved assistant
- * `tool_use` turn is protected as well. The one exception inside that cycle is a
- * block OmniRoute itself restored from claudeThinkingStore (the client never sent
- * it): it is swapped back to the #5312 `redacted_thinking` placeholder and
- * forgotten, so a rejected restored signature is still recoverable.
- *
- * This helper is intentionally NOT used eagerly. Normal same-model requests must
- * retain their thinking history, cache shape, and current-model semantics.
- * Returns the original body reference when no safe recovery change is possible.
- */
-export function stripHistoricalThinkingForSignatureRecovery<T>(body: T): T {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
-
-  const record = body as Record<string, unknown>;
-  if (!Array.isArray(record.messages)) return body;
-
-  const messages = record.messages as MessageLike[];
+function collectProtectedToolCycleIndexes(messages: MessageLike[]): Set<number> {
   const protectedAssistantIndexes = new Set<number>();
   let cursor = messages.length - 1;
 
@@ -314,6 +280,63 @@ export function stripHistoricalThinkingForSignatureRecovery<T>(body: T): T {
     protectedAssistantIndexes.add(cursor);
     cursor -= 1;
   }
+  return protectedAssistantIndexes;
+}
+
+/**
+ * Match the Anthropic thinking-validation failures this recovery path understands:
+ *
+ * 1. "Invalid signature in thinking block" — the classic replay failure.
+ * 2. "`thinking` or `redacted_thinking` blocks in the latest assistant message
+ *    cannot be modified. These blocks must remain as they were in the original
+ *    response." — produced when a ROUTER-RESTORED block was reinserted with the
+ *    wrong position/order (2026-10-22) or replayed against a different account.
+ *    The recovery body only differs from the original when the downgrade found
+ *    blocks this server itself restored (downgradeRestoredClaudeThinking), so a
+ *    client-owned genuine history still fails through unchanged — preserving the
+ *    original intent that generic 400s and genuine client edits surface as-is.
+ */
+export function isAnthropicThinkingSignatureError({
+  provider,
+  status,
+  message,
+}: ThinkingSignatureError): boolean {
+  const isAnthropicTarget =
+    provider === "claude" ||
+    (typeof provider === "string" && provider.startsWith("anthropic-compatible-"));
+  if (!isAnthropicTarget || status !== 400 || typeof message !== "string") return false;
+
+  if (/invalid\s+[`'\"]?signature[`'\"]?\s+in\s+[`'\"]?thinking[`'\"]?\s+block/i.test(message)) {
+    return true;
+  }
+  return /(`)?thinking(`)?\s+or\s+(`)?redacted_thinking(`)?\s+blocks\s+in\s+the\s+latest\s+assistant\s+message\s+cannot\s+be\s+modified/i.test(
+    message
+  );
+}
+
+/**
+ * Build a one-shot recovery body after Anthropic has explicitly rejected a
+ * thinking signature. Historical thinking blocks are omitted, but the complete
+ * active tool-use cycle is preserved verbatim: when the request ends in one or
+ * more `user[tool_result]` turns, every paired assistant `tool_use` turn in that
+ * still-open cycle keeps its thinking blocks. A trailing unresolved assistant
+ * `tool_use` turn is protected as well. The one exception inside that cycle is a
+ * block OmniRoute itself restored from claudeThinkingStore (the client never sent
+ * it): it is swapped back to the #5312 `redacted_thinking` placeholder and
+ * forgotten, so a rejected restored signature is still recoverable.
+ *
+ * This helper is intentionally NOT used eagerly. Normal same-model requests must
+ * retain their thinking history, cache shape, and current-model semantics.
+ * Returns the original body reference when no safe recovery change is possible.
+ */
+export function stripHistoricalThinkingForSignatureRecovery<T>(body: T): T {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+
+  const record = body as Record<string, unknown>;
+  if (!Array.isArray(record.messages)) return body;
+
+  const messages = record.messages as MessageLike[];
+  const protectedAssistantIndexes = collectProtectedToolCycleIndexes(messages);
 
   let changed = false;
   const recoveredMessages = messages.map((message, index) => {
@@ -331,6 +354,44 @@ export function stripHistoricalThinkingForSignatureRecovery<T>(body: T): T {
     if (content.length === message.content.length) return message;
     changed = true;
     return { ...message, content };
+  });
+
+  if (!changed) return body;
+  return { ...record, messages: recoveredMessages } as T;
+}
+
+/**
+ * Recovery strategy for the "latest assistant message cannot be modified" 400
+ * (2026-10-22): swap ONLY blocks this server itself restored from
+ * claudeThinkingStore back to the #5312 placeholder, inside the still-open
+ * tool-use cycle. Historical stripping does NOT apply — for that error class a
+ * client-owned genuine history cannot be repaired by the router, so the body
+ * must stay unchanged (and the error surface verbatim) unless a restored block
+ * is actually found. Returns the original reference when nothing is restored.
+ */
+export function stripRestoredClaudeThinkingForModificationRecovery<T>(body: T): T {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+
+  const record = body as Record<string, unknown>;
+  if (!Array.isArray(record.messages)) return body;
+
+  const messages = record.messages as MessageLike[];
+  const protectedAssistantIndexes = collectProtectedToolCycleIndexes(messages);
+
+  let changed = false;
+  const recoveredMessages = messages.map((message, index) => {
+    if (
+      !message ||
+      message.role !== "assistant" ||
+      !Array.isArray(message.content) ||
+      !protectedAssistantIndexes.has(index)
+    ) {
+      return message;
+    }
+    const downgraded = downgradeRestoredClaudeThinking(message.content);
+    if (!downgraded) return message;
+    changed = true;
+    return { ...message, content: downgraded as typeof message.content };
   });
 
   if (!changed) return body;
@@ -368,7 +429,14 @@ export async function executeWithAnthropicThinkingSignatureRecovery<T>(args: {
     return { result: first, retried: false, recoveryBody: null };
   }
 
-  const recoveryBody = stripHistoricalThinkingForSignatureRecovery(args.body);
+  // "cannot be modified" failures are only recoverable when a router-restored
+  // block is swapped back; historical stripping must not fire for them.
+  const isModificationError =
+    typeof failure.message === "string" &&
+    /cannot\s+be\s+modified/i.test(failure.message);
+  const recoveryBody = isModificationError
+    ? stripRestoredClaudeThinkingForModificationRecovery(args.body)
+    : stripHistoricalThinkingForSignatureRecovery(args.body);
   if (recoveryBody === args.body) {
     return { result: first, retried: false, recoveryBody: null };
   }

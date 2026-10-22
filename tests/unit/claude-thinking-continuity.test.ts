@@ -509,3 +509,190 @@ test("forgetClaudeThinkingForClientResponse drops entries for Chat and Responses
   });
   assert.equal(store.getClaudeThinkingStoreSizeForTests(), 0);
 });
+
+// ─── 2026-10-22: positional restore for interleaved multi-tool turns ───
+// Production 400 on claude/claude-opus-5-5 (36 calls, zero pre-deploy): a turn
+// whose original shape was [thinking₁, tool_use A, thinking₂, tool_use B] was
+// restored by unshifting ALL thinking blocks to the message front, producing
+// [thinking₁, thinking₂, A, B] — Anthropic validates the latest assistant
+// message's thinking blocks against the original response INCLUDING position,
+// so the reorder answered 400 "…cannot be modified. These blocks must remain as
+// they were in the original response."
+
+const THINKING_TEXT_2 = "Now that I have the first result, compare with Rome.";
+const SIGNATURE_2 = "EqQBCkYIBhgCKk_second_real_signature_part2";
+
+function interleavedToolTurnEvents(): Block[] {
+  return [
+    { type: "message_start", message: { id: "msg_2", model: MODEL, usage: { input_tokens: 10 } } },
+    { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } },
+    { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: THINKING_TEXT } },
+    { type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: SIGNATURE } },
+    { type: "content_block_stop", index: 0 },
+    { type: "content_block_start", index: 1, content_block: { type: "tool_use", id: "toolu_FIRST", name: "read_file", input: {} } },
+    { type: "content_block_delta", index: 1, delta: { type: "input_json_delta", partial_json: '{"path":"a.ts"}' } },
+    { type: "content_block_stop", index: 1 },
+    { type: "content_block_start", index: 2, content_block: { type: "thinking", thinking: "" } },
+    { type: "content_block_delta", index: 2, delta: { type: "thinking_delta", thinking: THINKING_TEXT_2 } },
+    { type: "content_block_delta", index: 2, delta: { type: "signature_delta", signature: SIGNATURE_2 } },
+    { type: "content_block_stop", index: 2 },
+    { type: "content_block_start", index: 3, content_block: { type: "tool_use", id: "toolu_SECOND", name: "read_file", input: {} } },
+    { type: "content_block_delta", index: 3, delta: { type: "input_json_delta", partial_json: '{"path":"b.ts"}' } },
+    { type: "content_block_stop", index: 3 },
+    { type: "message_delta", delta: { stop_reason: "tool_use" }, usage: { output_tokens: 42 } },
+    { type: "message_stop" },
+  ];
+}
+
+function multiToolHistory(toolIds: string[]): Block[] {
+  return [
+    { role: "user", content: "Read a.ts and b.ts" },
+    {
+      role: "assistant",
+      content: null,
+      tool_calls: toolIds.map((id, i) => ({
+        id,
+        type: "function",
+        function: { name: "read_file", arguments: `{"path":"${i === 0 ? "a.ts" : "b.ts"}"}` },
+      })),
+    },
+    ...toolIds.map((id) => ({ role: "tool", tool_call_id: id, content: "ok" })),
+  ];
+}
+
+test("interleaved multi-tool turn restores each thinking block before ITS owning tool_use", () => {
+  streamClaudeToChat(interleavedToolTurnEvents());
+
+  const turn = assistantTurn(translateChatTurn(multiToolHistory(["toolu_FIRST", "toolu_SECOND"])));
+  const shape = turn.content.map(stripCacheControl).map((b) =>
+    b.type === "thinking" ? { type: "thinking", signature: b.signature } : { type: b.type, id: b.id }
+  );
+  assert.deepEqual(shape, [
+    { type: "thinking", signature: SIGNATURE },
+    { type: "tool_use", id: "toolu_FIRST" },
+    { type: "thinking", signature: SIGNATURE_2 },
+    { type: "tool_use", id: "toolu_SECOND" },
+  ]);
+});
+
+test("subset history (compacted to one tool) restores nothing — placeholder fallback", () => {
+  streamClaudeToChat(interleavedToolTurnEvents());
+
+  const turn = assistantTurn(translateChatTurn(multiToolHistory(["toolu_FIRST"])));
+  const hasStored =
+    turn.content.some((b) => (b as Block).signature === SIGNATURE) ||
+    turn.content.some((b) => (b as Block).signature === SIGNATURE_2);
+  assert.equal(hasStored, false, "no stored signature may leak into an edited history");
+});
+
+test("reordered tool ids restore nothing", () => {
+  streamClaudeToChat(interleavedToolTurnEvents());
+
+  const turn = assistantTurn(translateChatTurn(multiToolHistory(["toolu_SECOND", "toolu_FIRST"])));
+  const hasStored =
+    turn.content.some((b) => (b as Block).signature === SIGNATURE) ||
+    turn.content.some((b) => (b as Block).signature === SIGNATURE_2);
+  assert.equal(hasStored, false);
+});
+
+test("store keeps the tool-use sequence and the plan mirrors it", () => {
+  streamClaudeToChat(interleavedToolTurnEvents());
+  const plan = store.restoreClaudeThinkingPlan({
+    toolUseIds: ["toolu_FIRST", "toolu_SECOND"],
+    provider: "claude",
+    model: MODEL,
+  });
+  assert.deepEqual(plan, [
+    { beforeToolUseId: "toolu_FIRST", blocks: [{ type: "thinking", thinking: THINKING_TEXT, signature: SIGNATURE }] },
+    { beforeToolUseId: "toolu_SECOND", blocks: [{ type: "thinking", thinking: THINKING_TEXT_2, signature: SIGNATURE_2 }] },
+  ]);
+});
+
+// ─── 2026-10-22: one-shot recovery for the "cannot be modified" 400 ───
+
+const { isAnthropicThinkingSignatureError, executeWithAnthropicThinkingSignatureRecovery } =
+  await import("../../open-sse/handlers/chatCore/passthroughHelpers.ts");
+
+test("matcher recognizes the production 'cannot be modified' message", () => {
+  const message =
+    "messages.125.content.1: `thinking` or `redacted_thinking` blocks in the latest assistant message cannot be modified. These blocks must remain as they were in the original response.";
+  assert.equal(isAnthropicThinkingSignatureError({ provider: "claude", status: 400, message }), true);
+  assert.equal(
+    isAnthropicThinkingSignatureError({ provider: "antigravity", status: 400, message }),
+    false
+  );
+  assert.equal(isAnthropicThinkingSignatureError({ provider: "claude", status: 429, message }), false);
+  // The classic signature error still matches.
+  assert.equal(
+    isAnthropicThinkingSignatureError({
+      provider: "claude",
+      status: 400,
+      message: "Invalid signature in thinking block",
+    }),
+    true
+  );
+});
+
+test("recovery retries a 'cannot be modified' 400 only when a router-restored block is present", async () => {
+  streamClaudeToChat(interleavedToolTurnEvents());
+  // Wire-shaped body whose latest assistant carries the RESTORED blocks.
+  const wireBodyWithRestored = {
+    messages: [
+      { role: "user", content: "Read a.ts and b.ts" },
+      {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: THINKING_TEXT, signature: SIGNATURE },
+          { type: "tool_use", id: "toolu_FIRST", name: "read_file", input: {} },
+        ],
+      },
+      { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_FIRST", content: "ok" }] },
+    ],
+  };
+  let calls = 0;
+  const recovery = await executeWithAnthropicThinkingSignatureRecovery({
+    provider: "claude",
+    body: wireBodyWithRestored,
+    execute: async (body) => {
+      calls += 1;
+      if (body === wireBodyWithRestored) {
+        return { ok: false, status: 400, message: "`thinking` or `redacted_thinking` blocks in the latest assistant message cannot be modified." };
+      }
+      return { ok: true, status: 200, message: null };
+    },
+    getError: async (r) => (r.ok ? null : { status: r.status, message: r.message }),
+  });
+  assert.equal(recovery.retried, true);
+  assert.equal(calls, 2);
+  // The retry body swapped the restored block for the placeholder.
+  const retriedLatest = (recovery.recoveryBody as { messages: Block[] }).messages[1];
+  const downgraded = (retriedLatest.content as Block[]).find((b) => b.type === "redacted_thinking");
+  assert.ok(downgraded, "restored block was downgraded to the redacted placeholder");
+
+  // Client-owned genuine history (nothing in the store matches): no retry.
+  const clientBody = {
+    messages: [
+      { role: "user", content: "hi" },
+      {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: "genuine", signature: "client_signature_not_in_store" },
+          { type: "tool_use", id: "toolu_OTHER", name: "read_file", input: {} },
+        ],
+      },
+      { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_OTHER", content: "ok" }] },
+    ],
+  };
+  let calls2 = 0;
+  const recovery2 = await executeWithAnthropicThinkingSignatureRecovery({
+    provider: "claude",
+    body: clientBody,
+    execute: async () => {
+      calls2 += 1;
+      return { ok: false, status: 400, message: "`thinking` or `redacted_thinking` blocks in the latest assistant message cannot be modified." };
+    },
+    getError: async (r) => ({ status: r.status, message: r.message }),
+  });
+  assert.equal(recovery2.retried, false);
+  assert.equal(calls2, 1, "client-owned failure surfaces unchanged");
+});

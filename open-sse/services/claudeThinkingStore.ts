@@ -28,10 +28,33 @@ export type ClaudeSignedThinkingBlock =
   | { type: "thinking"; thinking: string; signature: string }
   | { type: "redacted_thinking"; data: string };
 
+/**
+ * Ordered interleaving of one assistant turn's thinking and tool_use blocks, as
+ * Anthropic emitted them. The Messages API validates the LATEST assistant
+ * message's thinking blocks against the original response — including their
+ * positions — so a restore must reinsert each thinking block directly before
+ * the tool_use that followed it in the original turn (2026-10-22 production:
+ * restoring interleaved blocks by unshifting them all to the front of the
+ * message reordered them and Anthropic answered 400 "`thinking` or
+ * `redacted_thinking` blocks in the latest assistant message cannot be
+ * modified").
+ */
+export type ClaudeThinkingSequenceItem =
+  | { kind: "thinking"; block: ClaudeSignedThinkingBlock }
+  | { kind: "tool_use"; toolUseId: string };
+
+/** Restore plan: thinking blocks to reinsert, each directly before its tool_use. */
+export type ClaudeThinkingRestorePlan = Array<{
+  beforeToolUseId: string;
+  blocks: ClaudeSignedThinkingBlock[];
+}>;
+
 type Entry = {
   provider: string;
   model: string;
   blocks: ClaudeSignedThinkingBlock[];
+  /** Original interleaving with the turn's tool_use blocks; absent on legacy writes. */
+  sequence?: ClaudeThinkingSequenceItem[];
   size: number;
   expiresAt: number;
 };
@@ -83,6 +106,40 @@ function blockSize(block: ClaudeSignedThinkingBlock): number {
     : block.data.length;
 }
 
+/**
+ * Validate/normalize a caller-supplied sequence: every thinking block and every
+ * tool_use id of the turn must appear exactly once, in a consistent order.
+ */
+function normalizeSequence(
+  sequence: unknown,
+  blocks: ClaudeSignedThinkingBlock[],
+  toolUseIds: string[]
+): ClaudeThinkingSequenceItem[] | undefined {
+  if (!Array.isArray(sequence) || sequence.length === 0) return undefined;
+  const items: ClaudeThinkingSequenceItem[] = [];
+  const seenBlocks = new Set<ClaudeSignedThinkingBlock>();
+  const seenToolIds = new Set<string>();
+  for (const raw of sequence) {
+    if (!raw || typeof raw !== "object") return undefined;
+    const item = raw as Record<string, unknown>;
+    if (item.kind === "tool_use") {
+      const id = item.toolUseId;
+      if (typeof id !== "string" || !toolUseIds.includes(id) || seenToolIds.has(id)) return undefined;
+      seenToolIds.add(id);
+      items.push({ kind: "tool_use", toolUseId: id });
+    } else if (item.kind === "thinking") {
+      const normalized = normalizeBlock(item.block);
+      if (!normalized || seenBlocks.has(normalized)) return undefined;
+      seenBlocks.add(normalized);
+      items.push({ kind: "thinking", block: normalized });
+    } else {
+      return undefined;
+    }
+  }
+  if (seenBlocks.size !== blocks.length || seenToolIds.size !== toolUseIds.length) return undefined;
+  return items;
+}
+
 function cloneBlocks(blocks: ClaudeSignedThinkingBlock[]): ClaudeSignedThinkingBlock[] {
   return blocks.map((block) => ({ ...block }));
 }
@@ -122,6 +179,8 @@ export function storeClaudeThinkingBlocks(args: {
   blocks: unknown;
   provider: unknown;
   model: unknown;
+  /** Original interleaving with the turn's tool_use blocks (see the type doc). */
+  sequence?: unknown;
 }): boolean {
   const toolUseIds = collectToolUseIds(args.toolUseIds);
   const model = normalizeClaudeThinkingModel(args.model);
@@ -131,6 +190,7 @@ export function storeClaudeThinkingBlocks(args: {
   const blocks = args.blocks.map(normalizeBlock);
   if (!blocks.every(Boolean)) return false;
   const normalizedBlocks = blocks as ClaudeSignedThinkingBlock[];
+  const sequence = normalizeSequence(args.sequence, normalizedBlocks, toolUseIds);
   const size = normalizedBlocks.reduce((sum, block) => sum + blockSize(block), 0);
   if (size > MAX_CLAUDE_THINKING_ENTRY_CHARS) return false;
 
@@ -142,6 +202,7 @@ export function storeClaudeThinkingBlocks(args: {
       provider,
       model,
       blocks: cloneBlocks(normalizedBlocks),
+      sequence: sequence?.map((item) => ({ ...item })),
       size,
       expiresAt: now + CLAUDE_THINKING_MEMORY_TTL_MS,
     });
@@ -165,30 +226,50 @@ export function storeClaudeThinkingFromResponse(
   }
   const root = responseBody as Record<string, unknown>;
   if (!Array.isArray(root.content)) return false;
+  const sequence: ClaudeThinkingSequenceItem[] = [];
   const blocks: unknown[] = [];
   const toolUseIds: unknown[] = [];
   for (const block of root.content) {
     const type = (block as Record<string, unknown> | null)?.type;
-    if (type === "thinking" || type === "redacted_thinking") blocks.push(block);
-    else if (type === "tool_use") toolUseIds.push((block as Record<string, unknown>).id);
+    if (type === "thinking" || type === "redacted_thinking") {
+      const normalized = normalizeBlock(block);
+      if (normalized) {
+        blocks.push(block);
+        sequence.push({ kind: "thinking", block: normalized });
+      }
+    } else if (type === "tool_use") {
+      const id = (block as Record<string, unknown>).id;
+      if (typeof id === "string" && id) {
+        toolUseIds.push(id);
+        sequence.push({ kind: "tool_use", toolUseId: id });
+      }
+    }
   }
   return storeClaudeThinkingBlocks({
     toolUseIds,
     blocks,
+    sequence,
     provider: binding.provider,
     model: typeof root.model === "string" && root.model ? root.model : binding.model,
   });
 }
 
 /**
- * Return fresh copies of the signed blocks stored for the first tool_use id that
- * hits with the same provider + model binding, or null.
+ * Positional restore plan: for each tool_use id of the replayed assistant
+ * message, the signed thinking blocks that must sit directly before it —
+ * mirroring the original turn's interleaving.
+ *
+ * Only restores when the replayed message's tool_use id SEQUENCE exactly equals
+ * the stored turn's (same ids, same order). A subset, a superset, or a different
+ * order means the client edited/compacted/merged the turn, and no honest
+ * positional restore exists — returning null falls back to the #5312
+ * placeholder path.
  */
-export function restoreClaudeThinkingBlocks(args: {
+export function restoreClaudeThinkingPlan(args: {
   toolUseIds: unknown;
   provider: unknown;
   model: unknown;
-}): ClaudeSignedThinkingBlock[] | null {
+}): ClaudeThinkingRestorePlan | null {
   const toolUseIds = collectToolUseIds(args.toolUseIds);
   const model = normalizeClaudeThinkingModel(args.model);
   if (toolUseIds.length === 0 || !model) return null;
@@ -199,9 +280,60 @@ export function restoreClaudeThinkingBlocks(args: {
     const entry = entries.get(toolUseId);
     if (!entry) continue;
     if (entry.provider !== provider || entry.model !== model) return null;
-    return cloneBlocks(entry.blocks);
+
+    const entryToolIds = (entry.sequence ?? [])
+      .filter((item) => item.kind === "tool_use")
+      .map((item) => (item as { kind: "tool_use"; toolUseId: string }).toolUseId);
+    // Legacy entries without a stored sequence: approximate the old behavior
+    // (all blocks before the first tool_use) — the store is memory-only, so
+    // entries never outlive a restart and this path only serves races during a
+    // rolling deploy.
+    if (!entry.sequence || entryToolIds.length === 0) {
+      return [{ beforeToolUseId: toolUseIds[0], blocks: cloneBlocks(entry.blocks) }];
+    }
+    if (
+      entryToolIds.length !== toolUseIds.length ||
+      entryToolIds.some((id, index) => id !== toolUseIds[index])
+    ) {
+      return null;
+    }
+
+    const plan: ClaudeThinkingRestorePlan = [];
+    let pending: ClaudeSignedThinkingBlock[] = [];
+    for (const item of entry.sequence) {
+      if (item.kind === "thinking") {
+        pending.push(item.block);
+      } else {
+        plan.push({ beforeToolUseId: item.toolUseId, blocks: pending });
+        pending = [];
+      }
+    }
+    // Defensive: a trailing thinking run with no following tool_use attaches to
+    // the last tool_use (Anthropic never emits this shape, but tolerate it).
+    if (pending.length > 0 && plan.length > 0) {
+      plan[plan.length - 1].blocks.push(...pending);
+    }
+    return plan;
   }
   return null;
+}
+
+/**
+ * Flat-blocks view of the positional plan (legacy convenience): blocks in
+ * document order. Used by callers that only need to know whether an entry hits.
+ * Return fresh copies of the signed blocks stored for the first tool_use id that
+ * hits with the same provider + model binding, or null.
+ */
+export function restoreClaudeThinkingBlocks(args: {
+  toolUseIds: unknown;
+  provider: unknown;
+  model: unknown;
+}): ClaudeSignedThinkingBlock[] | null {
+  const plan = restoreClaudeThinkingPlan(args);
+  if (!plan) return null;
+  const flat: ClaudeSignedThinkingBlock[] = [];
+  for (const insertion of plan) flat.push(...cloneBlocks(insertion.blocks));
+  return flat;
 }
 
 function sameBlock(stored: ClaudeSignedThinkingBlock, block: unknown): boolean {

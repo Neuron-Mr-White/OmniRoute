@@ -10,7 +10,7 @@ import {
   createDefaultClaudeCacheControl,
 } from "../helpers/claudeHelper.ts";
 import { DEFAULT_THINKING_CLAUDE_SIGNATURE } from "../../config/defaultThinkingSignature.ts";
-import { restoreClaudeThinkingBlocks } from "../../services/claudeThinkingStore.ts";
+import { restoreClaudeThinkingPlan } from "../../services/claudeThinkingStore.ts";
 import {
   getDefaultThinkingBudget,
   isAdaptiveThinkingOnly,
@@ -781,10 +781,13 @@ function getContentBlocksFromMessage(
     const hasToolUseBlock = blocks.some((b) => b.type === "tool_use");
     // Signed-thinking continuity: the client (OpenAI Chat / Responses) never held the
     // signed blocks Claude produced for this tool turn, but claude-to-openai stored them
-    // keyed by the tool_use ids. Restore them verbatim before the owning tool_use —
-    // only for the same provider + model, only when this request has thinking on and
-    // the client sent no thinking block of its own, never for a video-derived request.
-    // A miss keeps the #5312 placeholder.
+    // keyed by the tool_use ids. Restore them verbatim — POSITIONALLY, each block
+    // directly before the tool_use it preceded in the original turn (2026-10-22:
+    // unshifting all restored blocks to the front reordered interleaved turns and
+    // Anthropic 400'd "thinking or redacted_thinking blocks in the latest assistant
+    // message cannot be modified") — only for the same provider + model, only when
+    // this request has thinking on and the client sent no thinking block of its own,
+    // never for a video-derived request. A miss keeps the #5312 placeholder.
     if (
       !isKimiCoding &&
       !thinkingBinding.disabled &&
@@ -792,14 +795,34 @@ function getContentBlocksFromMessage(
       hasToolUseBlock &&
       !hasThinkingBlock
     ) {
-      const restored = restoreClaudeThinkingBlocks({
+      const plan = restoreClaudeThinkingPlan({
         toolUseIds: blocks.filter((b) => b.type === "tool_use").map((b) => b.id),
         provider: thinkingBinding.provider,
         model: thinkingBinding.model,
       });
-      if (restored) {
-        blocks.unshift(...restored);
-        hasThinkingBlock = true;
+      if (plan) {
+        const insertions = new Map(plan.map((item) => [item.beforeToolUseId, item.blocks]));
+        const rebuilt: typeof blocks = [];
+        let insertedAny = false;
+        for (const block of blocks) {
+          if (block.type === "tool_use") {
+            const toInsert = insertions.get(block.id);
+            if (toInsert && toInsert.length > 0) {
+              rebuilt.push(...toInsert);
+              insertedAny = true;
+            }
+            insertions.delete(block.id);
+          }
+          rebuilt.push(block);
+        }
+        // Any leftover insertion means the plan referenced a tool_use the message
+        // does not carry — restoreClaudeThinkingPlan already validated the id
+        // sequence, so this cannot happen; skip defensively rather than reorder.
+        if (insertedAny && insertions.size === 0) {
+          blocks.length = 0;
+          blocks.push(...rebuilt);
+          hasThinkingBlock = true;
+        }
       }
     }
     if (isKimiCoding && typeof msg.reasoning_content === "string" && !hasThinkingBlock) {

@@ -50,9 +50,31 @@ function flushThinkingContinuity(state) {
   state.claudeThinkingFlushed = true;
   const blocks = thinkingBlocksOf(state);
   if (blocks.size === 0 || !(state.toolCalls instanceof Map) || state.toolCalls.size === 0) return;
+  // Preserve the ORIGINAL interleaving of thinking and tool_use blocks: both
+  // maps are keyed by the stream's content-block index, so a merged sort by
+  // index reproduces exactly how Anthropic ordered the turn. claudeThinkingStore
+  // uses it to reinsert each thinking block directly before its owning tool_use
+  // on the next turn (2026-10-22: front-unshifting interleaved blocks reordered
+  // the latest assistant message and Anthropic 400'd "thinking blocks cannot be
+  // modified").
+  const sequence = [
+    ...[...blocks.entries()].map(([index, block]) => ({ index, kind: "thinking", block })),
+    ...[...state.toolCalls.entries()].map(([index, toolCall]) => ({
+      index,
+      kind: "tool_use",
+      toolUseId: toolCall?.id,
+    })),
+  ]
+    .sort((left, right) => left.index - right.index)
+    .map((item) =>
+      item.kind === "thinking"
+        ? { kind: "thinking", block: item.block }
+        : { kind: "tool_use", toolUseId: item.toolUseId }
+    );
   storeClaudeThinkingBlocks({
     toolUseIds: [...state.toolCalls.values()].map((toolCall) => toolCall?.id),
     blocks: [...blocks.entries()].sort(([left], [right]) => left - right).map(([, b]) => b),
+    sequence,
     provider: state.provider,
     model: state.model,
   });
