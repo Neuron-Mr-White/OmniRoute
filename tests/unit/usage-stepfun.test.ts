@@ -180,3 +180,52 @@ test("missing key returns the add-a-key message", async () => {
 
   assert.match(result.message ?? "", /Add a key/);
 });
+
+test("the accounts fetch carries an abort timeout signal", async () => {
+  let receivedSignal: AbortSignal | null | undefined;
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    receivedSignal = init?.signal;
+    return new Response(JSON.stringify({ object: "account", balance: 1, total_cash_balance: 1 }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  await getStepfunUsage("test-key");
+
+  assert.ok(receivedSignal instanceof AbortSignal, "fetch must receive an AbortSignal");
+  assert.equal(receivedSignal.aborted, false);
+});
+
+test("a hung upstream abort surfaces as a message, not a throw", async () => {
+  globalThis.fetch = (async () => {
+    const err = new Error("The operation was aborted due to timeout");
+    err.name = "TimeoutError";
+    throw err;
+  }) as typeof fetch;
+
+  const result = (await getStepfunUsage("test-key")) as { message?: string };
+
+  assert.match(result.message ?? "", /Unable to fetch usage/);
+});
+
+test("fetch errors are sanitized before they reach the message", async () => {
+  globalThis.fetch = (async () => {
+    throw new Error(
+      "connect failed Bearer sk-live-SECRETTOKEN1234567890abcdef at /home/app/secret.ts"
+    );
+  }) as typeof fetch;
+
+  const result = (await getStepfunUsage("test-key")) as { message?: string };
+
+  assert.match(result.message ?? "", /Unable to fetch usage/);
+  assert.doesNotMatch(result.message ?? "", /SECRETTOKEN1234567890abcdef/);
+});
+
+test("a non-OK, non-401 status returns the status in a message", async () => {
+  globalThis.fetch = (async () => new Response("boom", { status: 500 })) as typeof fetch;
+
+  const result = (await getStepfunUsage("test-key")) as { message?: string };
+
+  assert.match(result.message ?? "", /StepFun quota API error \(500\)/);
+});

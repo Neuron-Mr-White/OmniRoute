@@ -29,8 +29,10 @@
 
 import { toNumber, toRecord } from "./scalars.ts";
 import { type UsageQuota } from "./quota.ts";
+import { sanitizeErrorMessage } from "../../utils/error.ts";
 
 const STEPFUN_DEFAULT_BASE_URL = "https://api.stepfun.com/v1";
+const STEPFUN_FETCH_TIMEOUT_MS = 10_000;
 
 /**
  * Resolve the accounts endpoint from the connection's base-URL override.
@@ -72,6 +74,7 @@ export async function getStepfunUsage(
     const accountsUrl = resolveStepfunAccountsUrl(providerSpecificData);
     const res = await fetch(accountsUrl, {
       headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(STEPFUN_FETCH_TIMEOUT_MS),
     });
 
     if (!res.ok) {
@@ -111,6 +114,10 @@ export async function getStepfunUsage(
       limitReached,
     };
   } catch (error) {
-    return { message: `StepFun connected. Unable to fetch usage: ${(error as Error).message}` };
+    return {
+      message: `StepFun connected. Unable to fetch usage: ${sanitizeErrorMessage(
+        error instanceof Error ? error.message : String(error)
+      )}`,
+    };
   }
 }
